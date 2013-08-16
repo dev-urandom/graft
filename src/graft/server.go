@@ -1,10 +1,17 @@
 package graft
 
+const (
+	Candidate = "candidate"
+	Follower = "follower"
+	Leader = "leader"
+)
+
 type Server struct {
 	Id string
 	Log []string
 	Term int
 	VotedFor string
+	State string
 }
 
 func New() *Server {
@@ -13,6 +20,7 @@ func New() *Server {
 		Log: []string{},
 		Term: 0,
 		VotedFor: "",
+		State: Follower,
 	}
 }
 
@@ -35,8 +43,13 @@ func (server *Server) lastLogTerm() int {
 	return 0
 }
 
+func (server *Server) stepDown() {
+	server.State = Follower
+}
+
 func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteResponseMessage {
 	if server.Term < message.Term {
+		server.stepDown()
 		server.Term = message.Term
 
 		return VoteResponseMessage {

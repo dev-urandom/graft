@@ -26,6 +26,13 @@ func TestNewServerStartsWithEmptyVotedFor(t *testing.T) {
 	test.Expect(server.VotedFor).ToEqual("")
 }
 
+func TestNewServerStartsAsFollower(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	test.Expect(server.State).ToEqual(Follower)
+}
+
 func TestGenerateRequestVote(t *testing.T) {
 	test := quiz.Test(t)
 
@@ -71,4 +78,22 @@ func TestReceiveRequestVoteUpdatesServerTerm(t *testing.T) {
 	server.ReceiveRequestVote(message)
 
 	test.Expect(server.Term).ToEqual(2)
+}
+
+func TestRecieveRequestVoteWithHigherTermCausesVoterToStepDown(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Term = 1
+	server.State = Candidate
+	message := RequestVoteMessage {
+		Term: 2,
+		CandidateId: "other_server_id",
+		LastLogIndex: 0,
+		LastLogTerm: 0,
+	}
+
+	server.ReceiveRequestVote(message)
+
+	test.Expect(server.State).ToEqual(Follower)
 }
