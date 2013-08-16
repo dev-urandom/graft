@@ -1,4 +1,4 @@
-package server
+package graft
 
 import (
 	"github.com/benmills/quiz"
@@ -24,4 +24,16 @@ func TestNewServerStartsWithEmptyVotedFor(t *testing.T) {
 
 	server := New()
 	test.Expect(server.VotedFor).ToEqual("")
+}
+
+func TestGenerateRequestVote(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	newRequestVote := server.RequestVote()
+
+	test.Expect(newRequestVote.term).ToEqual(1)
+	test.Expect(newRequestVote.candidateId).ToEqual(server.Id)
+	test.Expect(newRequestVote.lastLogIndex).ToEqual(0)
+	test.Expect(newRequestVote.lastLogTerm).ToEqual(0)
 }
