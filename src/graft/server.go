@@ -35,18 +35,6 @@ func (server *Server) RequestVote() RequestVoteMessage {
 	}
 }
 
-func (server *Server) lastLogIndex() int {
-	return len(server.Log)
-}
-
-func (server *Server) lastLogTerm() int {
-	return 0
-}
-
-func (server *Server) stepDown() {
-	server.State = Follower
-}
-
 func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteResponseMessage {
 	if server.Term < message.Term {
 		server.stepDown()
@@ -62,4 +50,30 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 			VoteGranted: false,
 		}
 	}
+}
+
+func (server *Server) AppendEntries() AppendEntriesMessage {
+	return AppendEntriesMessage{
+		Term: server.Term,
+		LeaderId: server.Id,
+		PrevLogIndex: server.lastLogIndex(),
+		Entries: []string{},
+		CommitIndex: server.lastCommitIndex(),
+	}
+}
+
+func (server *Server) lastCommitIndex() int {
+	return server.lastLogIndex()
+}
+
+func (server *Server) lastLogIndex() int {
+	return len(server.Log)
+}
+
+func (server *Server) lastLogTerm() int {
+	return 0
+}
+
+func (server *Server) stepDown() {
+	server.State = Follower
 }
