@@ -20,10 +20,10 @@ func (server *Server) RequestVote() RequestVoteMessage {
 	server.Term++
 
 	return RequestVoteMessage {
-		term: server.Term,
-		candidateId: server.Id,
-		lastLogIndex: server.lastLogIndex(),
-		lastLogTerm: server.lastLogTerm(),
+		Term: server.Term,
+		CandidateId: server.Id,
+		LastLogIndex: server.lastLogIndex(),
+		LastLogTerm: server.lastLogTerm(),
 	}
 }
 
@@ -33,4 +33,20 @@ func (server *Server) lastLogIndex() int {
 
 func (server *Server) lastLogTerm() int {
 	return 0
+}
+
+func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteResponseMessage {
+	if server.Term < message.Term {
+		server.Term = message.Term
+
+		return VoteResponseMessage {
+			Term: server.Term,
+			VoteGranted: true,
+		}
+	} else {
+		return VoteResponseMessage {
+			Term: server.Term,
+			VoteGranted: false,
+		}
+	}
 }

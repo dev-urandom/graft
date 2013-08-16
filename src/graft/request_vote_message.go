@@ -1,8 +1,8 @@
 package graft
 
 type RequestVoteMessage struct {
-	term int
-	candidateId string
-	lastLogIndex int
-	lastLogTerm int
+	Term int
+	CandidateId string
+	LastLogIndex int
+	LastLogTerm int
 }
