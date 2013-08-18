@@ -57,7 +57,7 @@ func (server *Server) AppendEntries() AppendEntriesMessage {
 		Term: server.Term,
 		LeaderId: server.Id,
 		PrevLogIndex: server.lastLogIndex(),
-		Entries: []string{},
+		Entries: []LogEntry{},
 		CommitIndex: server.lastCommitIndex(),
 	}
 }

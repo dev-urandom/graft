@@ -4,6 +4,6 @@ type AppendEntriesMessage struct {
 	Term int
 	LeaderId string
 	PrevLogIndex int
-	Entries []string
+	Entries []LogEntry
 	CommitIndex int
 }
