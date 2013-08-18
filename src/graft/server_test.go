@@ -33,6 +33,15 @@ func TestNewServerStartsAsFollower(t *testing.T) {
 	test.Expect(server.State).ToEqual(Follower)
 }
 
+func TestLastLogTermDerivedFromLogEntries (t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Log = []LogEntry{LogEntry{ Term: 1, Data: "test"}, LogEntry{ Term: 2, Data: "foo" }}
+
+  test.Expect(server.lastLogTerm()).ToEqual(2)
+}
+
 func TestGenerateRequestVote(t *testing.T) {
 	test := quiz.Test(t)
 
