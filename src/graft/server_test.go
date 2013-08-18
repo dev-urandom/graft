@@ -121,3 +121,21 @@ func TestGenerateAppendEntriesMessage(t *testing.T) {
 	test.Expect(len(message.Entries)).ToEqual(0)
 	test.Expect(message.CommitIndex).ToEqual(0)
 }
+
+func TestTermUpdatesWhenReceivingHigherTerm(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+
+	message := AppendEntriesMessage{
+		Term: 2,
+		LeaderId: "leader_id",
+		PrevLogIndex: 2,
+		Entries: []LogEntry{},
+		CommitIndex: 0,
+	}
+
+	server.ReceiveAppendEntries(message)
+
+	test.Expect(server.Term).ToEqual(2)
+}

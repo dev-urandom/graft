@@ -52,6 +52,12 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 	}
 }
 
+func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) {
+	if server.Term < message.Term {
+		server.Term = message.Term
+	}
+}
+
 func (server *Server) AppendEntries() AppendEntriesMessage {
 	return AppendEntriesMessage{
 		Term: server.Term,
