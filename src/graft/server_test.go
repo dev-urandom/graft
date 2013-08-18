@@ -33,16 +33,26 @@ func TestNewServerStartsAsFollower(t *testing.T) {
 	test.Expect(server.State).ToEqual(Follower)
 }
 
-func TestGenerateRequestVote(t *testing.T) {
+func TestLastLogTermDerivedFromLogEntries (t *testing.T) {
 	test := quiz.Test(t)
 
 	server := New()
+	server.Log = []LogEntry{LogEntry{ Term: 1, Data: "test"}, LogEntry{ Term: 2, Data: "foo" }}
+
+  test.Expect(server.lastLogTerm()).ToEqual(2)
+}
+
+func TestGenerateRequestVoteDerivedFromLog(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Log = []LogEntry{LogEntry{ Term: 1, Data: "test"}, LogEntry{ Term: 1, Data: "foo"}}
 	newRequestVote := server.RequestVote()
 
 	test.Expect(newRequestVote.Term).ToEqual(1)
 	test.Expect(newRequestVote.CandidateId).ToEqual(server.Id)
-	test.Expect(newRequestVote.LastLogIndex).ToEqual(0)
-	test.Expect(newRequestVote.LastLogTerm).ToEqual(0)
+	test.Expect(newRequestVote.LastLogIndex).ToEqual(2)
+	test.Expect(newRequestVote.LastLogTerm).ToEqual(1)
 }
 
 func TestReceiveRequestVoteNotSuccessfulForSmallerTerm(t *testing.T) {
@@ -110,4 +120,22 @@ func TestGenerateAppendEntriesMessage(t *testing.T) {
 	test.Expect(message.PrevLogIndex).ToEqual(0)
 	test.Expect(len(message.Entries)).ToEqual(0)
 	test.Expect(message.CommitIndex).ToEqual(0)
+}
+
+func TestTermUpdatesWhenReceivingHigherTerm(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+
+	message := AppendEntriesMessage{
+		Term: 2,
+		LeaderId: "leader_id",
+		PrevLogIndex: 2,
+		Entries: []LogEntry{},
+		CommitIndex: 0,
+	}
+
+	server.ReceiveAppendEntries(message)
+
+	test.Expect(server.Term).ToEqual(2)
 }

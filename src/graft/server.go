@@ -8,7 +8,7 @@ const (
 
 type Server struct {
 	Id string
-	Log []string
+	Log []LogEntry
 	Term int
 	VotedFor string
 	State string
@@ -17,7 +17,7 @@ type Server struct {
 func New() *Server {
 	return &Server{
 		Id: "",
-		Log: []string{},
+		Log: []LogEntry{},
 		Term: 0,
 		VotedFor: "",
 		State: Follower,
@@ -52,12 +52,18 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 	}
 }
 
+func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) {
+	if server.Term < message.Term {
+		server.Term = message.Term
+	}
+}
+
 func (server *Server) AppendEntries() AppendEntriesMessage {
 	return AppendEntriesMessage{
 		Term: server.Term,
 		LeaderId: server.Id,
 		PrevLogIndex: server.lastLogIndex(),
-		Entries: []string{},
+		Entries: []LogEntry{},
 		CommitIndex: server.lastCommitIndex(),
 	}
 }
@@ -71,7 +77,11 @@ func (server *Server) lastLogIndex() int {
 }
 
 func (server *Server) lastLogTerm() int {
-	return 0
+	if len(server.Log) == 0 {
+		return 0
+	} else {
+		return (server.Log[len(server.Log) - 1]).Term
+	}
 }
 
 func (server *Server) stepDown() {
