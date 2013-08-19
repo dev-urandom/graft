@@ -2,36 +2,36 @@ package graft
 
 const (
 	Candidate = "candidate"
-	Follower = "follower"
-	Leader = "leader"
+	Follower  = "follower"
+	Leader    = "leader"
 )
 
 type Server struct {
-	Id string
-	Log []LogEntry
-	Term int
+	Id       string
+	Log      []LogEntry
+	Term     int
 	VotedFor string
-	State string
+	State    string
 }
 
 func New() *Server {
 	return &Server{
-		Id: "",
-		Log: []LogEntry{},
-		Term: 0,
+		Id:       "",
+		Log:      []LogEntry{},
+		Term:     0,
 		VotedFor: "",
-		State: Follower,
+		State:    Follower,
 	}
 }
 
 func (server *Server) RequestVote() RequestVoteMessage {
 	server.Term++
 
-	return RequestVoteMessage {
-		Term: server.Term,
-		CandidateId: server.Id,
+	return RequestVoteMessage{
+		Term:         server.Term,
+		CandidateId:  server.Id,
 		LastLogIndex: server.lastLogIndex(),
-		LastLogTerm: server.lastLogTerm(),
+		LastLogTerm:  server.lastLogTerm(),
 	}
 }
 
@@ -40,19 +40,20 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 		server.stepDown()
 		server.Term = message.Term
 
-		return VoteResponseMessage {
-			Term: server.Term,
+		return VoteResponseMessage{
+			Term:        server.Term,
 			VoteGranted: true,
 		}
 	} else {
-		return VoteResponseMessage {
-			Term: server.Term,
+		return VoteResponseMessage{
+			Term:        server.Term,
 			VoteGranted: false,
 		}
 	}
 }
 
 func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) {
+	server.stepDown()
 	if server.Term < message.Term {
 		server.Term = message.Term
 	}
@@ -60,11 +61,11 @@ func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) {
 
 func (server *Server) AppendEntries() AppendEntriesMessage {
 	return AppendEntriesMessage{
-		Term: server.Term,
-		LeaderId: server.Id,
+		Term:         server.Term,
+		LeaderId:     server.Id,
 		PrevLogIndex: server.lastLogIndex(),
-		Entries: []LogEntry{},
-		CommitIndex: server.lastCommitIndex(),
+		Entries:      []LogEntry{},
+		CommitIndex:  server.lastCommitIndex(),
 	}
 }
 
@@ -80,7 +81,7 @@ func (server *Server) lastLogTerm() int {
 	if len(server.Log) == 0 {
 		return 0
 	} else {
-		return (server.Log[len(server.Log) - 1]).Term
+		return (server.Log[len(server.Log)-1]).Term
 	}
 }
 
