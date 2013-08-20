@@ -36,7 +36,7 @@ func (server *Server) RequestVote() RequestVoteMessage {
 }
 
 func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteResponseMessage {
-	if server.Term < message.Term {
+	if server.Term < message.Term && server.logUpToDate(message) {
 		server.stepDown()
 		server.Term = message.Term
 
@@ -113,4 +113,8 @@ func (server *Server) updateLog(prevLogIndex int, entries []LogEntry) {
 	for i, entry := range entries {
 		server.Log[i+prevLogIndex] = entry
 	}
+}
+
+func (server *Server) logUpToDate(message RequestVoteMessage) bool {
+	return server.lastLogIndex() <= message.LastLogIndex && server.lastLogTerm() <= message.LastLogTerm
 }
