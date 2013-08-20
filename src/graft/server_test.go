@@ -73,6 +73,43 @@ func TestReceiveRequestVoteNotSuccessfulForSmallerTerm(t *testing.T) {
 	test.Expect(voteResponse.VoteGranted).ToBeFalse()
 }
 
+func TestReceiveRequestVoteNotSuccessfulForOutOfDateLogIndex(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Log = []LogEntry{LogEntry{Term: 0, Data: "some data"}}
+
+	message := RequestVoteMessage{
+		Term:         1,
+		CandidateId:  "other_server_id",
+		LastLogIndex: 0,
+		LastLogTerm:  0,
+	}
+
+	voteResponse := server.ReceiveRequestVote(message)
+
+	test.Expect(voteResponse.VoteGranted).ToBeFalse()
+}
+
+func TestReceiveRequestVoteNotSuccessfulForOutOfDateLogTerm(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Term = 1
+	server.Log = []LogEntry{LogEntry{Term: 1, Data: "some data"}}
+
+	message := RequestVoteMessage{
+		Term:         2,
+		CandidateId:  "other_server_id",
+		LastLogIndex: 1,
+		LastLogTerm:  0,
+	}
+
+	voteResponse := server.ReceiveRequestVote(message)
+
+	test.Expect(voteResponse.VoteGranted).ToBeFalse()
+}
+
 func TestReceiveRequestVoteUpdatesServerTerm(t *testing.T) {
 	test := quiz.Test(t)
 
