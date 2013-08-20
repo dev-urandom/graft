@@ -52,10 +52,14 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 	}
 }
 
-func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) {
+func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) AppendEntriesResponseMessage {
 	server.stepDown()
 	if server.Term < message.Term {
 		server.Term = message.Term
+	}
+
+	return AppendEntriesResponseMessage{
+		Success: false,
 	}
 }
 

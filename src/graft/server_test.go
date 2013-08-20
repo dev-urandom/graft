@@ -122,6 +122,25 @@ func TestGenerateAppendEntriesMessage(t *testing.T) {
 	test.Expect(message.CommitIndex).ToEqual(0)
 }
 
+func TestAppendEntriesFailsWhenReceivedTermIsLessThanCurrentTerm(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Term = 3
+
+	message := AppendEntriesMessage{
+		Term:         2,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 2,
+		Entries:      []LogEntry{},
+		CommitIndex:  0,
+	}
+
+	response := server.ReceiveAppendEntries(message)
+
+	test.Expect(response.Success).ToBeFalse()
+}
+
 func TestTermUpdatesWhenReceivingHigherTermInAppendEntries(t *testing.T) {
 	test := quiz.Test(t)
 
