@@ -141,6 +141,63 @@ func TestAppendEntriesFailsWhenReceivedTermIsLessThanCurrentTerm(t *testing.T) {
 	test.Expect(response.Success).ToBeFalse()
 }
 
+func TestAppendEntiesFailsWhenLogContainsNothingAtPrevLogIndex(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+
+	message := AppendEntriesMessage{
+		Term:         2,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 1,
+		Entries:      []LogEntry{},
+		PrevLogTerm:  2,
+		CommitIndex:  0,
+	}
+
+	response := server.ReceiveAppendEntries(message)
+
+	test.Expect(response.Success).ToBeFalse()
+}
+
+func TestAppendEntriesFailsWhenLogDoesNotContainEntryAtPrevLogIndexMatchingPrevLogTerm(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Log = []LogEntry{LogEntry{Term: 1, Data: "data"}}
+
+	message := AppendEntriesMessage{
+		Term:         2,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 1,
+		Entries:      []LogEntry{},
+		PrevLogTerm:  2,
+		CommitIndex:  0,
+	}
+
+	response := server.ReceiveAppendEntries(message)
+
+	test.Expect(response.Success).ToBeFalse()
+}
+
+func TestAppendEntriesSucceedsWhenHeartbeatingOnAnEmptyLog(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	message := AppendEntriesMessage{
+		Term:         1,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 0,
+		Entries:      []LogEntry{},
+		PrevLogTerm:  2,
+		CommitIndex:  0,
+	}
+
+	response := server.ReceiveAppendEntries(message)
+
+	test.Expect(response.Success).ToBeTrue()
+}
+
 func TestTermUpdatesWhenReceivingHigherTermInAppendEntries(t *testing.T) {
 	test := quiz.Test(t)
 
