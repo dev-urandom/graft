@@ -122,6 +122,82 @@ func TestGenerateAppendEntriesMessage(t *testing.T) {
 	test.Expect(message.CommitIndex).ToEqual(0)
 }
 
+func TestAppendEntriesFailsWhenReceivedTermIsLessThanCurrentTerm(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Term = 3
+
+	message := AppendEntriesMessage{
+		Term:         2,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 2,
+		Entries:      []LogEntry{},
+		CommitIndex:  0,
+	}
+
+	response := server.ReceiveAppendEntries(message)
+
+	test.Expect(response.Success).ToBeFalse()
+}
+
+func TestAppendEntiesFailsWhenLogContainsNothingAtPrevLogIndex(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+
+	message := AppendEntriesMessage{
+		Term:         2,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 1,
+		Entries:      []LogEntry{},
+		PrevLogTerm:  2,
+		CommitIndex:  0,
+	}
+
+	response := server.ReceiveAppendEntries(message)
+
+	test.Expect(response.Success).ToBeFalse()
+}
+
+func TestAppendEntriesFailsWhenLogDoesNotContainEntryAtPrevLogIndexMatchingPrevLogTerm(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Log = []LogEntry{LogEntry{Term: 1, Data: "data"}}
+
+	message := AppendEntriesMessage{
+		Term:         2,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 1,
+		Entries:      []LogEntry{},
+		PrevLogTerm:  2,
+		CommitIndex:  0,
+	}
+
+	response := server.ReceiveAppendEntries(message)
+
+	test.Expect(response.Success).ToBeFalse()
+}
+
+func TestAppendEntriesSucceedsWhenHeartbeatingOnAnEmptyLog(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	message := AppendEntriesMessage{
+		Term:         1,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 0,
+		Entries:      []LogEntry{},
+		PrevLogTerm:  2,
+		CommitIndex:  0,
+	}
+
+	response := server.ReceiveAppendEntries(message)
+
+	test.Expect(response.Success).ToBeTrue()
+}
+
 func TestTermUpdatesWhenReceivingHigherTermInAppendEntries(t *testing.T) {
 	test := quiz.Test(t)
 
@@ -176,4 +252,25 @@ func TestLeaderStepsDownWhenReceivingAppendEntriesMessage(t *testing.T) {
 	server.ReceiveAppendEntries(message)
 
 	test.Expect(server.State).ToEqual(Follower)
+}
+
+func TestServerDeletesConflictingEntriesWhenReceivingAppendEntriesMessage(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Log = []LogEntry{LogEntry{Term: 1, Data: "bad"}}
+
+	message := AppendEntriesMessage{
+		Term:         1,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 0,
+		Entries:      []LogEntry{LogEntry{Term: 1, Data: "good"}},
+		CommitIndex:  0,
+	}
+
+	server.ReceiveAppendEntries(message)
+
+	entry := server.Log[0]
+	test.Expect(entry.Term).ToEqual(1)
+	test.Expect(entry.Data).ToEqual("good")
 }

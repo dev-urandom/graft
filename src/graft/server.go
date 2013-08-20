@@ -52,10 +52,22 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 	}
 }
 
-func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) {
+func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) AppendEntriesResponseMessage {
 	server.stepDown()
 	if server.Term < message.Term {
 		server.Term = message.Term
+	}
+
+	if server.Term > message.Term || server.invalidLog(message) {
+		return AppendEntriesResponseMessage{
+			Success: false,
+		}
+	}
+
+	server.updateLog(message.PrevLogIndex, message.Entries)
+
+	return AppendEntriesResponseMessage{
+		Success: true,
 	}
 }
 
@@ -87,4 +99,18 @@ func (server *Server) lastLogTerm() int {
 
 func (server *Server) stepDown() {
 	server.State = Follower
+}
+
+func (server *Server) invalidLog(message AppendEntriesMessage) bool {
+	if message.PrevLogIndex == 0 {
+		return false
+	}
+
+	return len(server.Log) < message.PrevLogIndex || server.Log[message.PrevLogIndex-1].Term != message.PrevLogTerm
+}
+
+func (server *Server) updateLog(prevLogIndex int, entries []LogEntry) {
+	for i, entry := range entries {
+		server.Log[i+prevLogIndex] = entry
+	}
 }
