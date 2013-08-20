@@ -253,3 +253,24 @@ func TestLeaderStepsDownWhenReceivingAppendEntriesMessage(t *testing.T) {
 
 	test.Expect(server.State).ToEqual(Follower)
 }
+
+func TestServerDeletesConflictingEntriesWhenReceivingAppendEntriesMessage(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Log = []LogEntry{LogEntry{Term: 1, Data: "bad"}}
+
+	message := AppendEntriesMessage{
+		Term:         1,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 0,
+		Entries:      []LogEntry{LogEntry{Term: 1, Data: "good"}},
+		CommitIndex:  0,
+	}
+
+	server.ReceiveAppendEntries(message)
+
+	entry := server.Log[0]
+	test.Expect(entry.Term).ToEqual(1)
+	test.Expect(entry.Data).ToEqual("good")
+}
