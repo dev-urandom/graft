@@ -14,6 +14,7 @@ type ElectionTimer struct {
 	shutDownChannel chan int
 	resets          int
 	duration        time.Duration
+	tickerBuilder   func(time.Duration) *time.Ticker
 }
 
 func NewElectionTimer(duration time.Duration, electable Electable) *ElectionTimer {
@@ -22,6 +23,7 @@ func NewElectionTimer(duration time.Duration, electable Electable) *ElectionTime
 		ElectionChannel: make(chan int),
 		shutDownChannel: make(chan int),
 		duration:        duration,
+		tickerBuilder:   time.NewTicker,
 	}
 
 	go timer.waitForElection()
@@ -30,7 +32,7 @@ func NewElectionTimer(duration time.Duration, electable Electable) *ElectionTime
 
 func (timer *ElectionTimer) StartTimer() {
 	go func() {
-		ticker := time.NewTicker(timer.duration)
+		ticker := timer.tickerBuilder(timer.duration)
 		for {
 			select {
 			case <-ticker.C:
