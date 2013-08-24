@@ -8,7 +8,7 @@ import (
 
 type SpyServer struct {
 	electionStarted bool
-	electionCount int
+	electionCount   int
 }
 
 func (server *SpyServer) StartElection() {

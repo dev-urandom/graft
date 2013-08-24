@@ -9,19 +9,19 @@ type Electable interface {
 }
 
 type ElectionTimer struct {
-	electable Electable
+	electable       Electable
 	ElectionChannel chan int
 	shutDownChannel chan int
-	resets int
-	duration time.Duration
+	resets          int
+	duration        time.Duration
 }
 
 func NewElectionTimer(duration time.Duration, electable Electable) *ElectionTimer {
 	timer := &ElectionTimer{
-		electable: electable,
+		electable:       electable,
 		ElectionChannel: make(chan int),
 		shutDownChannel: make(chan int),
-		duration: duration,
+		duration:        duration,
 	}
 
 	go timer.waitForElection()
@@ -47,9 +47,9 @@ func (timer *ElectionTimer) startElection() {
 func (timer *ElectionTimer) waitForElection() {
 	for {
 		select {
-		case <- timer.ElectionChannel:
+		case <-timer.ElectionChannel:
 			timer.startElection()
-		case <- timer.shutDownChannel:
+		case <-timer.shutDownChannel:
 			return
 		}
 	}

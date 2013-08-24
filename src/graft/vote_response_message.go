@@ -1,6 +1,6 @@
 package graft
 
 type VoteResponseMessage struct {
-	Term int
+	Term        int
 	VoteGranted bool
 }
