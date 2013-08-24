@@ -8,13 +8,36 @@ type Electable interface {
 	StartElection()
 }
 
+type Tickable interface {
+	Stop()
+	Chan() <-chan time.Time
+}
+
 type ElectionTimer struct {
 	electable       Electable
 	ElectionChannel chan int
 	shutDownChannel chan int
 	resets          int
 	duration        time.Duration
-	tickerBuilder   func(time.Duration) *time.Ticker
+	tickerBuilder   func(time.Duration) Tickable
+}
+
+type WrappedTicker struct {
+	ticker *time.Ticker
+}
+
+func (ticker *WrappedTicker) Chan() <-chan time.Time {
+	return ticker.ticker.C
+}
+
+func (ticker *WrappedTicker) Stop() {
+	ticker.ticker.Stop()
+}
+
+func DefaultTicker(d time.Duration) Tickable {
+	return &WrappedTicker{
+		ticker: time.NewTicker(d),
+	}
 }
 
 func NewElectionTimer(duration time.Duration, electable Electable) *ElectionTimer {
@@ -23,7 +46,7 @@ func NewElectionTimer(duration time.Duration, electable Electable) *ElectionTime
 		ElectionChannel: make(chan int),
 		shutDownChannel: make(chan int),
 		duration:        duration,
-		tickerBuilder:   time.NewTicker,
+		tickerBuilder:   DefaultTicker,
 	}
 
 	go timer.waitForElection()
@@ -35,7 +58,7 @@ func (timer *ElectionTimer) StartTimer() {
 		ticker := timer.tickerBuilder(timer.duration)
 		for {
 			select {
-			case <-ticker.C:
+			case <-ticker.Chan():
 				timer.ElectionChannel <- 1
 			}
 		}
