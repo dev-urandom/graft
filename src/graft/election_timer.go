@@ -30,9 +30,13 @@ func NewElectionTimer(duration time.Duration, electable Electable) *ElectionTime
 
 func (timer *ElectionTimer) StartTimer() {
 	go func() {
-		time.Sleep(timer.duration)
-		timer.ElectionChannel <- 1
-		timer.StartTimer()
+		ticker := time.NewTicker(timer.duration)
+		for {
+			select {
+			case <-ticker.C:
+				timer.ElectionChannel <- 1
+			}
+		}
 	}()
 }
 

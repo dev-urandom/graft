@@ -30,11 +30,11 @@ func TestTimer(t *testing.T) {
 	test := quiz.Test(t)
 
 	spyServer := &SpyServer{electionStarted: false, electionCount: 0}
-	timer := NewElectionTimer(0, spyServer)
+	timer := NewElectionTimer(1, spyServer)
 
 	timer.StartTimer()
 
-	time.Sleep(1)
+	time.Sleep(100000)
 	test.Expect(spyServer.electionStarted).ToBeTrue()
 	timer.ShutDown()
 }
