@@ -13,6 +13,7 @@ type Server struct {
 	VotedFor     string
 	VotesGranted int
 	State        string
+	Peers        []*Server
 }
 
 func New() *Server {
@@ -23,7 +24,12 @@ func New() *Server {
 		VotedFor:     "",
 		VotesGranted: 0,
 		State:        Follower,
+		Peers:        []*Server{},
 	}
+}
+
+func (server *Server) AddPeer(peer *Server) {
+	server.Peers = append(server.Peers, peer)
 }
 
 func (server *Server) RequestVote() RequestVoteMessage {

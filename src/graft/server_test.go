@@ -345,3 +345,14 @@ func TestRecieveVoteResponseTalliesVoteGranted(t *testing.T) {
 	test.Expect(server.State).ToEqual(Candidate)
 	test.Expect(server.Term).ToEqual(0)
 }
+
+func TestServersHavePeers(t *testing.T) {
+	test := quiz.Test(t)
+
+	serverA := New()
+	serverB := New()
+
+	serverA.AddPeer(serverB)
+
+	test.Expect(serverA.Peers[0]).ToEqual(serverB)
+}
