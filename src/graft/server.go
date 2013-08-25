@@ -7,24 +7,45 @@ const (
 )
 
 type Server struct {
-	Id       string
-	Log      []LogEntry
-	Term     int
-	VotedFor string
-	State    string
+	Id           string
+	Log          []LogEntry
+	Term         int
+	VotedFor     string
+	VotesGranted int
+	State        string
+	Peers        []*Server
 }
 
 func New() *Server {
 	return &Server{
-		Id:       "",
-		Log:      []LogEntry{},
-		Term:     0,
-		VotedFor: "",
-		State:    Follower,
+		Id:           "",
+		Log:          []LogEntry{},
+		Term:         0,
+		VotedFor:     "",
+		VotesGranted: 0,
+		State:        Follower,
+		Peers:        []*Server{},
+	}
+}
+
+func (server *Server) AddPeer(peer *Server) {
+	server.Peers = append(server.Peers, peer)
+}
+
+func (server *Server) StartElection() {
+	requestVoteMessage := server.RequestVote()
+	for _, peer := range(server.Peers) {
+		response := peer.ReceiveRequestVote(requestVoteMessage)
+		server.RecieveVoteResponse(response)
+	}
+
+	if server.VotesGranted > (len(server.Peers)/2) {
+		server.State = Leader
 	}
 }
 
 func (server *Server) RequestVote() RequestVoteMessage {
+	server.State = Candidate
 	server.Term++
 
 	return RequestVoteMessage{
@@ -49,6 +70,15 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 			Term:        server.Term,
 			VoteGranted: false,
 		}
+	}
+}
+
+func (server *Server) RecieveVoteResponse(message VoteResponseMessage) {
+	if message.VoteGranted {
+		server.VotesGranted++
+	} else {
+		server.Term = message.Term
+		server.State = Follower
 	}
 }
 

@@ -311,3 +311,109 @@ func TestServerDeletesConflictingEntriesWhenReceivingAppendEntriesMessage(t *tes
 	test.Expect(entry.Term).ToEqual(1)
 	test.Expect(entry.Data).ToEqual("good")
 }
+
+func TestRecieveVoteResponseEndsElectionForHigherTerm(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Term = 0
+	server.State = Candidate
+
+	server.RecieveVoteResponse(VoteResponseMessage{
+		VoteGranted: false,
+		Term: 2,
+	})
+
+	test.Expect(server.State).ToEqual(Follower)
+	test.Expect(server.Term).ToEqual(2)
+	test.Expect(server.VotesGranted).ToEqual(0)
+}
+
+func TestRecieveVoteResponseTalliesVoteGranted(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Term = 0
+	server.State = Candidate
+
+	server.RecieveVoteResponse(VoteResponseMessage{
+		VoteGranted: true,
+		Term: 0,
+	})
+
+	test.Expect(server.VotesGranted).ToEqual(1)
+	test.Expect(server.State).ToEqual(Candidate)
+	test.Expect(server.Term).ToEqual(0)
+}
+
+func TestServersHavePeers(t *testing.T) {
+	test := quiz.Test(t)
+
+	serverA := New()
+	serverB := New()
+
+	serverA.AddPeer(serverB)
+
+	test.Expect(serverA.Peers[0]).ToEqual(serverB)
+}
+
+func TestServerCanWinElection(t *testing.T) {
+	test := quiz.Test(t)
+
+	serverA := New()
+	serverB := New()
+	serverC := New()
+	serverA.AddPeer(serverB)
+	serverA.AddPeer(serverC)
+
+	serverA.StartElection()
+
+	test.Expect(serverA.State).ToEqual(Leader)
+	test.Expect(serverA.Term).ToEqual(1)
+	test.Expect(serverA.VotesGranted).ToEqual(2)
+
+	test.Expect(serverB.VotedFor).ToEqual(serverA.Id)
+	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
+}
+
+func TestServerCanLooseElectionForPeerWithHigherTerm(t *testing.T) {
+	test := quiz.Test(t)
+
+	serverA := New()
+	serverB := New()
+	serverC := New()
+	serverA.AddPeer(serverB)
+	serverA.AddPeer(serverC)
+
+	serverB.Term = 2
+
+	serverA.StartElection()
+
+	test.Expect(serverA.State).ToEqual(Follower)
+	test.Expect(serverA.Term).ToEqual(2)
+	test.Expect(serverA.VotesGranted).ToEqual(1)
+
+	test.Expect(serverB.VotedFor).ToEqual("")
+	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
+}
+
+func TestServerCanLooseElectionDueToOutOfDateLog(t *testing.T) {
+	test := quiz.Test(t)
+
+	serverA := New()
+	serverB := New()
+	serverC := New()
+	serverA.AddPeer(serverB)
+	serverA.AddPeer(serverC)
+
+	serverB.Log = []LogEntry{LogEntry{Term: 1, Data: "some data"}}
+
+	serverA.StartElection()
+
+	test.Expect(serverA.State).ToEqual(Follower)
+	test.Expect(serverA.Term).ToEqual(0)
+	test.Expect(serverA.VotesGranted).ToEqual(1)
+
+	test.Expect(serverB.VotedFor).ToEqual("")
+	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
+}
