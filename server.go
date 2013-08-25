@@ -6,15 +6,14 @@ const (
 	Leader    = "leader"
 )
 
-type NullTimer struct {
-}
+type NullTimer struct{}
 
-func (timer NullTimer) Reset() {
-
-}
+func (timer NullTimer) Reset()      {}
+func (timer NullTimer) StartTimer() {}
 
 type Timable interface {
 	Reset()
+	StartTimer()
 }
 
 type Server struct {
@@ -43,6 +42,10 @@ func New() *Server {
 
 func (server *Server) AddPeer(peer *Server) {
 	server.Peers = append(server.Peers, peer)
+}
+
+func (server *Server) Start() {
+	server.ElectionTimer.StartTimer()
 }
 
 func (server *Server) StartElection() {

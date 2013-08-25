@@ -2,6 +2,7 @@ package graft
 
 import (
 	"github.com/benmills/quiz"
+	"github.com/wjdix/tiktok"
 	"testing"
 )
 
@@ -12,6 +13,8 @@ type SpyTimer struct {
 func (timer SpyTimer) Reset() {
 	timer.resetChannel <- 1
 }
+
+func (timer SpyTimer) StartTimer() {}
 
 func TestNewServerHasEmptyEntries(t *testing.T) {
 	test := quiz.Test(t)
@@ -430,6 +433,31 @@ func TestServersHavePeers(t *testing.T) {
 	serverA.AddPeer(serverB)
 
 	test.Expect(serverA.Peers[0]).ToEqual(serverB)
+}
+
+func TestServerCanStartAndWinElectionAfterElectionTimeout(t *testing.T) {
+	test := quiz.Test(t)
+
+	serverA := New()
+	timer := NewElectionTimer(1, serverA)
+	timer.tickerBuilder = FakeTicker
+	defer tiktok.ClearTickers()
+	serverA.ElectionTimer = timer
+	serverB := New()
+	serverC := New()
+	serverA.AddPeer(serverB)
+	serverA.AddPeer(serverC)
+
+	serverA.Start()
+	tiktok.Tick(1)
+
+	timer.ShutDown()
+	test.Expect(serverA.State).ToEqual(Leader)
+	test.Expect(serverA.Term).ToEqual(1)
+	test.Expect(serverA.VotesGranted).ToEqual(2)
+
+	test.Expect(serverB.VotedFor).ToEqual(serverA.Id)
+	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
 }
 
 func TestServerCanWinElection(t *testing.T) {
