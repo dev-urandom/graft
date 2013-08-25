@@ -135,6 +135,39 @@ func TestReceiveRequestVoteUpdatesServerTerm(t *testing.T) {
 	test.Expect(server.Term).ToEqual(2)
 }
 
+func TestReceiveRequestVoteResetsElectionTimeout(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Term = 1
+	timer := SpyTimer{make(chan int)}
+	server.ElectionTimer = timer
+	message := RequestVoteMessage{
+		Term:         2,
+		CandidateId:  "other_server_id",
+		LastLogIndex: 0,
+		LastLogTerm:  0,
+	}
+
+	shutDownChannel := make(chan int)
+
+	go func(shutDownChannel chan int) {
+		var resets int
+		for {
+			select {
+			case <-timer.resetChannel:
+				resets++
+			case <-shutDownChannel:
+				test.Expect(resets).ToEqual(1)
+				return
+			}
+		}
+	}(shutDownChannel)
+
+	server.ReceiveRequestVote(message)
+	shutDownChannel <- 1
+}
+
 func TestRecieveRequestVoteWithHigherTermCausesVoterToStepDown(t *testing.T) {
 	test := quiz.Test(t)
 

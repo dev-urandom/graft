@@ -73,6 +73,7 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 	if server.Term < message.Term && server.logUpToDate(message) {
 		server.stepDown()
 		server.Term = message.Term
+		server.ElectionTimer.Reset()
 
 		return VoteResponseMessage{
 			Term:        server.Term,
