@@ -6,25 +6,38 @@ const (
 	Leader    = "leader"
 )
 
+type NullTimer struct {
+}
+
+func (timer NullTimer) Reset() {
+
+}
+
+type Timable interface {
+	Reset()
+}
+
 type Server struct {
-	Id           string
-	Log          []LogEntry
-	Term         int
-	VotedFor     string
-	VotesGranted int
-	State        string
-	Peers        []*Server
+	Id            string
+	Log           []LogEntry
+	Term          int
+	VotedFor      string
+	VotesGranted  int
+	State         string
+	Peers         []*Server
+	ElectionTimer Timable
 }
 
 func New() *Server {
 	return &Server{
-		Id:           "",
-		Log:          []LogEntry{},
-		Term:         0,
-		VotedFor:     "",
-		VotesGranted: 0,
-		State:        Follower,
-		Peers:        []*Server{},
+		Id:            "",
+		Log:           []LogEntry{},
+		Term:          0,
+		VotedFor:      "",
+		VotesGranted:  0,
+		State:         Follower,
+		Peers:         []*Server{},
+		ElectionTimer: NullTimer{},
 	}
 }
 
@@ -34,12 +47,12 @@ func (server *Server) AddPeer(peer *Server) {
 
 func (server *Server) StartElection() {
 	requestVoteMessage := server.RequestVote()
-	for _, peer := range(server.Peers) {
+	for _, peer := range server.Peers {
 		response := peer.ReceiveRequestVote(requestVoteMessage)
 		server.RecieveVoteResponse(response)
 	}
 
-	if server.VotesGranted > (len(server.Peers)/2) {
+	if server.VotesGranted > (len(server.Peers) / 2) {
 		server.State = Leader
 	}
 }
@@ -94,6 +107,7 @@ func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) AppendE
 		}
 	}
 
+	server.ElectionTimer.Reset()
 	server.updateLog(message.PrevLogIndex, message.Entries)
 
 	return AppendEntriesResponseMessage{

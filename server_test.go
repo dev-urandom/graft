@@ -5,6 +5,14 @@ import (
 	"testing"
 )
 
+type SpyTimer struct {
+	resetChannel chan int
+}
+
+func (timer SpyTimer) Reset() {
+	timer.resetChannel <- 1
+}
+
 func TestNewServerHasEmptyEntries(t *testing.T) {
 	test := quiz.Test(t)
 
@@ -217,6 +225,40 @@ func TestAppendEntriesFailsWhenLogDoesNotContainEntryAtPrevLogIndexMatchingPrevL
 	test.Expect(response.Success).ToBeFalse()
 }
 
+func TestSuccessfulAppendEntriesResetsElectionTimer(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	timer := SpyTimer{make(chan int)}
+	server.ElectionTimer = timer
+	message := AppendEntriesMessage{
+		Term:         1,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 0,
+		Entries:      []LogEntry{},
+		PrevLogTerm:  2,
+		CommitIndex:  0,
+	}
+
+	shutDownChannel := make(chan int)
+
+	go func(shutDownChannel chan int) {
+		var resets int
+		for {
+			select {
+			case <-timer.resetChannel:
+				resets++
+			case <-shutDownChannel:
+				test.Expect(resets).ToEqual(1)
+				return
+			}
+		}
+	}(shutDownChannel)
+
+	server.ReceiveAppendEntries(message)
+	shutDownChannel <- 1
+}
+
 func TestAppendEntriesSucceedsWhenHeartbeatingOnAnEmptyLog(t *testing.T) {
 	test := quiz.Test(t)
 
@@ -321,7 +363,7 @@ func TestRecieveVoteResponseEndsElectionForHigherTerm(t *testing.T) {
 
 	server.RecieveVoteResponse(VoteResponseMessage{
 		VoteGranted: false,
-		Term: 2,
+		Term:        2,
 	})
 
 	test.Expect(server.State).ToEqual(Follower)
@@ -338,7 +380,7 @@ func TestRecieveVoteResponseTalliesVoteGranted(t *testing.T) {
 
 	server.RecieveVoteResponse(VoteResponseMessage{
 		VoteGranted: true,
-		Term: 0,
+		Term:        0,
 	})
 
 	test.Expect(server.VotesGranted).ToEqual(1)
