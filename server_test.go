@@ -171,7 +171,7 @@ func TestReceiveRequestVoteResetsElectionTimeout(t *testing.T) {
 	shutDownChannel <- 1
 }
 
-func TestRecieveRequestVoteWithHigherTermCausesVoterToStepDown(t *testing.T) {
+func TestReceiveRequestVoteWithHigherTermCausesVoterToStepDown(t *testing.T) {
 	test := quiz.Test(t)
 
 	server := New()
@@ -390,14 +390,14 @@ func TestServerDeletesConflictingEntriesWhenReceivingAppendEntriesMessage(t *tes
 	test.Expect(entry.Data).ToEqual("good")
 }
 
-func TestRecieveVoteResponseEndsElectionForHigherTerm(t *testing.T) {
+func TestReceiveVoteResponseEndsElectionForHigherTerm(t *testing.T) {
 	test := quiz.Test(t)
 
 	server := New()
 	server.Term = 0
 	server.State = Candidate
 
-	server.RecieveVoteResponse(VoteResponseMessage{
+	server.ReceiveVoteResponse(VoteResponseMessage{
 		VoteGranted: false,
 		Term:        2,
 	})
@@ -407,14 +407,14 @@ func TestRecieveVoteResponseEndsElectionForHigherTerm(t *testing.T) {
 	test.Expect(server.VotesGranted).ToEqual(0)
 }
 
-func TestRecieveVoteResponseTalliesVoteGranted(t *testing.T) {
+func TestReceiveVoteResponseTalliesVoteGranted(t *testing.T) {
 	test := quiz.Test(t)
 
 	server := New()
 	server.Term = 0
 	server.State = Candidate
 
-	server.RecieveVoteResponse(VoteResponseMessage{
+	server.ReceiveVoteResponse(VoteResponseMessage{
 		VoteGranted: true,
 		Term:        0,
 	})

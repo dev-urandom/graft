@@ -52,7 +52,7 @@ func (server *Server) StartElection() {
 	requestVoteMessage := server.RequestVote()
 	for _, peer := range server.Peers {
 		response := peer.ReceiveRequestVote(requestVoteMessage)
-		server.RecieveVoteResponse(response)
+		server.ReceiveVoteResponse(response)
 	}
 
 	if server.VotesGranted > (len(server.Peers) / 2) {
@@ -90,7 +90,7 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 	}
 }
 
-func (server *Server) RecieveVoteResponse(message VoteResponseMessage) {
+func (server *Server) ReceiveVoteResponse(message VoteResponseMessage) {
 	if message.VoteGranted {
 		server.VotesGranted++
 	} else {
