@@ -2,6 +2,7 @@ install:
   - rm -rf pkg
   - rm -rf src/github.com
   - env GOPATH=$PWD go get github.com/benmills/quiz
+  - env GOPATH=$PWD go get github.com/wjdix/tiktok
   - env GOPATH=$PWD go install github.com/benmills/quiz
   - env GOPATH=$PWD go install graft/...
 script: env GOPATH=$PWD go test -v graft/...
