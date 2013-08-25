@@ -54,6 +54,11 @@ func NewElectionTimer(duration time.Duration, electable Electable) *ElectionTime
 	return timer
 }
 
+func (timer *ElectionTimer) Reset() {
+	timer.stopTimer()
+	timer.StartTimer()
+}
+
 func (timer *ElectionTimer) StartTimer() {
 	timer.stopTickerChan = make(chan int)
 	go func(ticker Tickable) {
@@ -70,14 +75,18 @@ func (timer *ElectionTimer) StartTimer() {
 }
 
 func (timer *ElectionTimer) ShutDown() {
-	if timer.stopTickerChan != nil {
-		timer.stopTickerChan <- 1
-	}
+	timer.stopTimer()
 	timer.shutDownChannel <- 1
 }
 
 func (timer *ElectionTimer) startElection() {
 	timer.electable.StartElection()
+}
+
+func (timer *ElectionTimer) stopTimer() {
+	if timer.stopTickerChan != nil {
+		timer.stopTickerChan <- 1
+	}
 }
 
 func (timer *ElectionTimer) waitForElection() {
