@@ -32,7 +32,20 @@ func (server *Server) AddPeer(peer *Server) {
 	server.Peers = append(server.Peers, peer)
 }
 
+func (server *Server) StartElection() {
+	requestVoteMessage := server.RequestVote()
+	for _, peer := range(server.Peers) {
+		response := peer.ReceiveRequestVote(requestVoteMessage)
+		server.RecieveVoteResponse(response)
+	}
+
+	if server.VotesGranted > (len(server.Peers)/2) {
+		server.State = Leader
+	}
+}
+
 func (server *Server) RequestVote() RequestVoteMessage {
+	server.State = Candidate
 	server.Term++
 
 	return RequestVoteMessage{
