@@ -311,3 +311,37 @@ func TestServerDeletesConflictingEntriesWhenReceivingAppendEntriesMessage(t *tes
 	test.Expect(entry.Term).ToEqual(1)
 	test.Expect(entry.Data).ToEqual("good")
 }
+
+func TestRecieveVoteResponseEndsElectionForHigherTerm(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Term = 0
+	server.State = Candidate
+
+	server.RecieveVoteResponse(VoteResponseMessage{
+		VoteGranted: false,
+		Term: 2,
+	})
+
+	test.Expect(server.State).ToEqual(Follower)
+	test.Expect(server.Term).ToEqual(2)
+	test.Expect(server.VotesGranted).ToEqual(0)
+}
+
+func TestRecieveVoteResponseTalliesVoteGranted(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Term = 0
+	server.State = Candidate
+
+	server.RecieveVoteResponse(VoteResponseMessage{
+		VoteGranted: true,
+		Term: 0,
+	})
+
+	test.Expect(server.VotesGranted).ToEqual(1)
+	test.Expect(server.State).ToEqual(Candidate)
+	test.Expect(server.Term).ToEqual(0)
+}

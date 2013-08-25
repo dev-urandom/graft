@@ -7,20 +7,22 @@ const (
 )
 
 type Server struct {
-	Id       string
-	Log      []LogEntry
-	Term     int
-	VotedFor string
-	State    string
+	Id           string
+	Log          []LogEntry
+	Term         int
+	VotedFor     string
+	VotesGranted int
+	State        string
 }
 
 func New() *Server {
 	return &Server{
-		Id:       "",
-		Log:      []LogEntry{},
-		Term:     0,
-		VotedFor: "",
-		State:    Follower,
+		Id:           "",
+		Log:          []LogEntry{},
+		Term:         0,
+		VotedFor:     "",
+		VotesGranted: 0,
+		State:        Follower,
 	}
 }
 
@@ -49,6 +51,15 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 			Term:        server.Term,
 			VoteGranted: false,
 		}
+	}
+}
+
+func (server *Server) RecieveVoteResponse(message VoteResponseMessage) {
+	if message.VoteGranted {
+		server.VotesGranted++
+	} else {
+		server.Term = message.Term
+		server.State = Follower
 	}
 }
 
