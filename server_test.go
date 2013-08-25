@@ -418,7 +418,7 @@ func TestServerCanWinElection(t *testing.T) {
 	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
 }
 
-func TestServerCanLooseElectionForPeerWithHigherTerm(t *testing.T) {
+func TestServerCanLoseElectionForPeerWithHigherTerm(t *testing.T) {
 	test := quiz.Test(t)
 
 	serverA := New()
@@ -439,7 +439,7 @@ func TestServerCanLooseElectionForPeerWithHigherTerm(t *testing.T) {
 	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
 }
 
-func TestServerCanLooseElectionDueToOutOfDateLog(t *testing.T) {
+func TestServerCanLoseElectionDueToOutOfDateLog(t *testing.T) {
 	test := quiz.Test(t)
 
 	serverA := New()
