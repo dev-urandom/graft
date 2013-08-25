@@ -6,6 +6,14 @@ import (
 	"testing"
 )
 
+type SpyStateMachine struct {
+	messageChan chan string
+}
+
+func (machine SpyStateMachine) Commit(data string) {
+	machine.messageChan <- data
+}
+
 type SpyTimer struct {
 	resetChannel chan int
 }
@@ -311,6 +319,40 @@ func TestAppendEntriesSucceedsWhenHeartbeatingOnAnEmptyLog(t *testing.T) {
 	response := server.ReceiveAppendEntries(message)
 
 	test.Expect(response.Success).ToBeTrue()
+}
+
+func TestAppendEntriesCommitsToStateMachineBasedOnCommitIndex(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	messageChan := make(chan string)
+	stateMachine := SpyStateMachine{messageChan}
+	shutdownChan := make(chan int)
+	server.StateMachine = stateMachine
+	message := AppendEntriesMessage{
+		Term:         1,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 0,
+		Entries:      []LogEntry{LogEntry{Term: 1, Data: "foo"}},
+		PrevLogTerm:  1,
+		CommitIndex:  1,
+	}
+
+	go func(messageChan chan string, shutDownChan chan int) {
+		messages := []string{}
+		for {
+			select {
+			case message := <-messageChan:
+				messages = append(messages, message)
+			case <-shutdownChan:
+				test.Expect(messages[0]).ToEqual("foo")
+				return
+			}
+		}
+	}(messageChan, shutdownChan)
+
+	server.ReceiveAppendEntries(message)
+	shutdownChan <- 0
 }
 
 func TestTermUpdatesWhenReceivingHigherTermInAppendEntries(t *testing.T) {

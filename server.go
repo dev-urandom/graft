@@ -16,6 +16,10 @@ type Timable interface {
 	StartTimer()
 }
 
+type Commiter interface {
+	Commit(string)
+}
+
 type Server struct {
 	Id            string
 	Log           []LogEntry
@@ -25,6 +29,8 @@ type Server struct {
 	State         string
 	Peers         []*Server
 	ElectionTimer Timable
+	StateMachine  Commiter
+	CommitIndex   int
 }
 
 func New() *Server {
@@ -113,6 +119,7 @@ func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) AppendE
 
 	server.ElectionTimer.Reset()
 	server.updateLog(message.PrevLogIndex, message.Entries)
+	server.commitTo(message.CommitIndex)
 
 	return AppendEntriesResponseMessage{
 		Success: true,
@@ -129,8 +136,15 @@ func (server *Server) AppendEntries() AppendEntriesMessage {
 	}
 }
 
+func (server *Server) commitTo(i int) {
+	if server.CommitIndex == 0 && i > 0 {
+		server.StateMachine.Commit(server.Log[0].Data)
+		server.CommitIndex = 1
+	}
+}
+
 func (server *Server) lastCommitIndex() int {
-	return server.lastLogIndex()
+	return server.CommitIndex
 }
 
 func (server *Server) lastLogIndex() int {
@@ -158,6 +172,9 @@ func (server *Server) invalidLog(message AppendEntriesMessage) bool {
 }
 
 func (server *Server) updateLog(prevLogIndex int, entries []LogEntry) {
+	if len(server.Log) == 0 {
+		server.Log = entries
+	}
 	for i, entry := range entries {
 		server.Log[i+prevLogIndex] = entry
 	}
