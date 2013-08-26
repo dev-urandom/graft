@@ -2,8 +2,27 @@ package graft
 
 import (
 	"github.com/benmills/quiz"
+	"github.com/wjdix/tiktok"
 	"testing"
 )
+
+type SpyStateMachine struct {
+	messageChan chan string
+}
+
+func (machine SpyStateMachine) Commit(data string) {
+	machine.messageChan <- data
+}
+
+type SpyTimer struct {
+	resetChannel chan int
+}
+
+func (timer SpyTimer) Reset() {
+	timer.resetChannel <- 1
+}
+
+func (timer SpyTimer) StartTimer() {}
 
 func TestNewServerHasEmptyEntries(t *testing.T) {
 	test := quiz.Test(t)
@@ -127,7 +146,40 @@ func TestReceiveRequestVoteUpdatesServerTerm(t *testing.T) {
 	test.Expect(server.Term).ToEqual(2)
 }
 
-func TestRecieveRequestVoteWithHigherTermCausesVoterToStepDown(t *testing.T) {
+func TestReceiveRequestVoteResetsElectionTimeout(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Term = 1
+	timer := SpyTimer{make(chan int)}
+	server.ElectionTimer = timer
+	message := RequestVoteMessage{
+		Term:         2,
+		CandidateId:  "other_server_id",
+		LastLogIndex: 0,
+		LastLogTerm:  0,
+	}
+
+	shutDownChannel := make(chan int)
+
+	go func(shutDownChannel chan int) {
+		var resets int
+		for {
+			select {
+			case <-timer.resetChannel:
+				resets++
+			case <-shutDownChannel:
+				test.Expect(resets).ToEqual(1)
+				return
+			}
+		}
+	}(shutDownChannel)
+
+	server.ReceiveRequestVote(message)
+	shutDownChannel <- 1
+}
+
+func TestReceiveRequestVoteWithHigherTermCausesVoterToStepDown(t *testing.T) {
 	test := quiz.Test(t)
 
 	server := New()
@@ -217,6 +269,40 @@ func TestAppendEntriesFailsWhenLogDoesNotContainEntryAtPrevLogIndexMatchingPrevL
 	test.Expect(response.Success).ToBeFalse()
 }
 
+func TestSuccessfulAppendEntriesResetsElectionTimer(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	timer := SpyTimer{make(chan int)}
+	server.ElectionTimer = timer
+	message := AppendEntriesMessage{
+		Term:         1,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 0,
+		Entries:      []LogEntry{},
+		PrevLogTerm:  2,
+		CommitIndex:  0,
+	}
+
+	shutDownChannel := make(chan int)
+
+	go func(shutDownChannel chan int) {
+		var resets int
+		for {
+			select {
+			case <-timer.resetChannel:
+				resets++
+			case <-shutDownChannel:
+				test.Expect(resets).ToEqual(1)
+				return
+			}
+		}
+	}(shutDownChannel)
+
+	server.ReceiveAppendEntries(message)
+	shutDownChannel <- 1
+}
+
 func TestAppendEntriesSucceedsWhenHeartbeatingOnAnEmptyLog(t *testing.T) {
 	test := quiz.Test(t)
 
@@ -233,6 +319,40 @@ func TestAppendEntriesSucceedsWhenHeartbeatingOnAnEmptyLog(t *testing.T) {
 	response := server.ReceiveAppendEntries(message)
 
 	test.Expect(response.Success).ToBeTrue()
+}
+
+func TestAppendEntriesCommitsToStateMachineBasedOnCommitIndex(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	messageChan := make(chan string)
+	stateMachine := SpyStateMachine{messageChan}
+	shutdownChan := make(chan int)
+	server.StateMachine = stateMachine
+	message := AppendEntriesMessage{
+		Term:         1,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 0,
+		Entries:      []LogEntry{LogEntry{Term: 1, Data: "foo"}},
+		PrevLogTerm:  1,
+		CommitIndex:  1,
+	}
+
+	go func(messageChan chan string, shutDownChan chan int) {
+		messages := []string{}
+		for {
+			select {
+			case message := <-messageChan:
+				messages = append(messages, message)
+			case <-shutdownChan:
+				test.Expect(messages[0]).ToEqual("foo")
+				return
+			}
+		}
+	}(messageChan, shutdownChan)
+
+	server.ReceiveAppendEntries(message)
+	shutdownChan <- 0
 }
 
 func TestTermUpdatesWhenReceivingHigherTermInAppendEntries(t *testing.T) {
@@ -312,16 +432,16 @@ func TestServerDeletesConflictingEntriesWhenReceivingAppendEntriesMessage(t *tes
 	test.Expect(entry.Data).ToEqual("good")
 }
 
-func TestRecieveVoteResponseEndsElectionForHigherTerm(t *testing.T) {
+func TestReceiveVoteResponseEndsElectionForHigherTerm(t *testing.T) {
 	test := quiz.Test(t)
 
 	server := New()
 	server.Term = 0
 	server.State = Candidate
 
-	server.RecieveVoteResponse(VoteResponseMessage{
+	server.ReceiveVoteResponse(VoteResponseMessage{
 		VoteGranted: false,
-		Term: 2,
+		Term:        2,
 	})
 
 	test.Expect(server.State).ToEqual(Follower)
@@ -329,16 +449,16 @@ func TestRecieveVoteResponseEndsElectionForHigherTerm(t *testing.T) {
 	test.Expect(server.VotesGranted).ToEqual(0)
 }
 
-func TestRecieveVoteResponseTalliesVoteGranted(t *testing.T) {
+func TestReceiveVoteResponseTalliesVoteGranted(t *testing.T) {
 	test := quiz.Test(t)
 
 	server := New()
 	server.Term = 0
 	server.State = Candidate
 
-	server.RecieveVoteResponse(VoteResponseMessage{
+	server.ReceiveVoteResponse(VoteResponseMessage{
 		VoteGranted: true,
-		Term: 0,
+		Term:        0,
 	})
 
 	test.Expect(server.VotesGranted).ToEqual(1)
@@ -355,6 +475,31 @@ func TestServersHavePeers(t *testing.T) {
 	serverA.AddPeer(serverB)
 
 	test.Expect(serverA.Peers[0]).ToEqual(serverB)
+}
+
+func TestServerCanStartAndWinElectionAfterElectionTimeout(t *testing.T) {
+	test := quiz.Test(t)
+
+	serverA := New()
+	timer := NewElectionTimer(1, serverA)
+	timer.tickerBuilder = FakeTicker
+	defer tiktok.ClearTickers()
+	serverA.ElectionTimer = timer
+	serverB := New()
+	serverC := New()
+	serverA.AddPeer(serverB)
+	serverA.AddPeer(serverC)
+
+	serverA.Start()
+	tiktok.Tick(1)
+
+	timer.ShutDown()
+	test.Expect(serverA.State).ToEqual(Leader)
+	test.Expect(serverA.Term).ToEqual(1)
+	test.Expect(serverA.VotesGranted).ToEqual(2)
+
+	test.Expect(serverB.VotedFor).ToEqual(serverA.Id)
+	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
 }
 
 func TestServerCanWinElection(t *testing.T) {
@@ -376,7 +521,7 @@ func TestServerCanWinElection(t *testing.T) {
 	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
 }
 
-func TestServerCanLooseElectionForPeerWithHigherTerm(t *testing.T) {
+func TestServerCanLoseElectionForPeerWithHigherTerm(t *testing.T) {
 	test := quiz.Test(t)
 
 	serverA := New()
@@ -397,7 +542,7 @@ func TestServerCanLooseElectionForPeerWithHigherTerm(t *testing.T) {
 	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
 }
 
-func TestServerCanLooseElectionDueToOutOfDateLog(t *testing.T) {
+func TestServerCanLoseElectionDueToOutOfDateLog(t *testing.T) {
 	test := quiz.Test(t)
 
 	serverA := New()

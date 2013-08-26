@@ -6,25 +6,43 @@ const (
 	Leader    = "leader"
 )
 
+type NullTimer struct{}
+
+func (timer NullTimer) Reset()      {}
+func (timer NullTimer) StartTimer() {}
+
+type Timable interface {
+	Reset()
+	StartTimer()
+}
+
+type Commiter interface {
+	Commit(string)
+}
+
 type Server struct {
-	Id           string
-	Log          []LogEntry
-	Term         int
-	VotedFor     string
-	VotesGranted int
-	State        string
-	Peers        []*Server
+	Id            string
+	Log           []LogEntry
+	Term          int
+	VotedFor      string
+	VotesGranted  int
+	State         string
+	Peers         []*Server
+	ElectionTimer Timable
+	StateMachine  Commiter
+	CommitIndex   int
 }
 
 func New() *Server {
 	return &Server{
-		Id:           "",
-		Log:          []LogEntry{},
-		Term:         0,
-		VotedFor:     "",
-		VotesGranted: 0,
-		State:        Follower,
-		Peers:        []*Server{},
+		Id:            "",
+		Log:           []LogEntry{},
+		Term:          0,
+		VotedFor:      "",
+		VotesGranted:  0,
+		State:         Follower,
+		Peers:         []*Server{},
+		ElectionTimer: NullTimer{},
 	}
 }
 
@@ -32,14 +50,18 @@ func (server *Server) AddPeer(peer *Server) {
 	server.Peers = append(server.Peers, peer)
 }
 
+func (server *Server) Start() {
+	server.ElectionTimer.StartTimer()
+}
+
 func (server *Server) StartElection() {
 	requestVoteMessage := server.RequestVote()
-	for _, peer := range(server.Peers) {
+	for _, peer := range server.Peers {
 		response := peer.ReceiveRequestVote(requestVoteMessage)
-		server.RecieveVoteResponse(response)
+		server.ReceiveVoteResponse(response)
 	}
 
-	if server.VotesGranted > (len(server.Peers)/2) {
+	if server.VotesGranted > (len(server.Peers) / 2) {
 		server.State = Leader
 	}
 }
@@ -60,6 +82,7 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 	if server.Term < message.Term && server.logUpToDate(message) {
 		server.stepDown()
 		server.Term = message.Term
+		server.ElectionTimer.Reset()
 
 		return VoteResponseMessage{
 			Term:        server.Term,
@@ -73,7 +96,7 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 	}
 }
 
-func (server *Server) RecieveVoteResponse(message VoteResponseMessage) {
+func (server *Server) ReceiveVoteResponse(message VoteResponseMessage) {
 	if message.VoteGranted {
 		server.VotesGranted++
 	} else {
@@ -94,7 +117,9 @@ func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) AppendE
 		}
 	}
 
+	server.ElectionTimer.Reset()
 	server.updateLog(message.PrevLogIndex, message.Entries)
+	server.commitTo(message.CommitIndex)
 
 	return AppendEntriesResponseMessage{
 		Success: true,
@@ -111,8 +136,15 @@ func (server *Server) AppendEntries() AppendEntriesMessage {
 	}
 }
 
+func (server *Server) commitTo(i int) {
+	if server.CommitIndex == 0 && i > 0 {
+		server.StateMachine.Commit(server.Log[0].Data)
+		server.CommitIndex = 1
+	}
+}
+
 func (server *Server) lastCommitIndex() int {
-	return server.lastLogIndex()
+	return server.CommitIndex
 }
 
 func (server *Server) lastLogIndex() int {
@@ -140,6 +172,9 @@ func (server *Server) invalidLog(message AppendEntriesMessage) bool {
 }
 
 func (server *Server) updateLog(prevLogIndex int, entries []LogEntry) {
+	if len(server.Log) == 0 {
+		server.Log = entries
+	}
 	for i, entry := range entries {
 		server.Log[i+prevLogIndex] = entry
 	}
