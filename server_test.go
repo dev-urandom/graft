@@ -4,7 +4,22 @@ import (
 	"github.com/benmills/quiz"
 	"github.com/wjdix/tiktok"
 	"testing"
+	"errors"
 )
+
+type FailingPeer struct {
+	numberOfFails int
+	successfulResponse VoteResponseMessage
+}
+
+func (peer *FailingPeer) ReceiveRequestVote(message RequestVoteMessage) (VoteResponseMessage, error) {
+	if peer.numberOfFails > 0 {
+		peer.numberOfFails--
+		return VoteResponseMessage{}, errors.New("boom")
+	}
+
+	return peer.successfulResponse, nil
+}
 
 type SpyStateMachine struct {
 	messageChan chan string
@@ -86,7 +101,7 @@ func TestReceiveRequestVoteNotSuccessfulForSmallerTerm(t *testing.T) {
 		LastLogTerm:  0,
 	}
 
-	voteResponse := server.ReceiveRequestVote(message)
+	voteResponse, _ := server.ReceiveRequestVote(message)
 
 	test.Expect(voteResponse.Term).ToEqual(2)
 	test.Expect(voteResponse.VoteGranted).ToBeFalse()
@@ -105,7 +120,7 @@ func TestReceiveRequestVoteNotSuccessfulForOutOfDateLogIndex(t *testing.T) {
 		LastLogTerm:  0,
 	}
 
-	voteResponse := server.ReceiveRequestVote(message)
+	voteResponse, _ := server.ReceiveRequestVote(message)
 
 	test.Expect(voteResponse.VoteGranted).ToBeFalse()
 }
@@ -124,7 +139,7 @@ func TestReceiveRequestVoteNotSuccessfulForOutOfDateLogTerm(t *testing.T) {
 		LastLogTerm:  0,
 	}
 
-	voteResponse := server.ReceiveRequestVote(message)
+	voteResponse, _ := server.ReceiveRequestVote(message)
 
 	test.Expect(voteResponse.VoteGranted).ToBeFalse()
 }
@@ -195,6 +210,15 @@ func TestReceiveRequestVoteWithHigherTermCausesVoterToStepDown(t *testing.T) {
 	server.ReceiveRequestVote(message)
 
 	test.Expect(server.State).ToEqual(Follower)
+}
+
+func TestReceiveVoteResponseReturnsAnError(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	_, err := server.ReceiveRequestVote(RequestVoteMessage{})
+
+	test.Expect(err).ToEqual(nil)
 }
 
 func TestGenerateAppendEntriesMessage(t *testing.T) {
@@ -561,4 +585,27 @@ func TestServerCanLoseElectionDueToOutOfDateLog(t *testing.T) {
 
 	test.Expect(serverB.VotedFor).ToEqual("")
 	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
+}
+
+func TestServerCanWinElectionWithRetries(t *testing.T) {
+	test := quiz.Test(t)
+
+	serverA := New()
+	serverB := New()
+	serverC := &FailingPeer{
+		numberOfFails: 1,
+		successfulResponse: VoteResponseMessage{
+			Term: 0,
+			VoteGranted: true,
+		},
+	}
+
+	serverA.AddPeer(serverB)
+	serverA.AddPeer(serverC)
+
+	serverA.StartElection()
+
+	test.Expect(serverA.State).ToEqual(Leader)
+	test.Expect(serverA.Term).ToEqual(1)
+	test.Expect(serverA.VotesGranted).ToEqual(2)
 }
