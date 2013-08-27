@@ -27,7 +27,7 @@ type Server struct {
 	VotedFor      string
 	VotesGranted  int
 	State         string
-	Peers         []*Server
+	Peers         []Peer
 	ElectionTimer Timable
 	StateMachine  Commiter
 	CommitIndex   int
@@ -41,12 +41,12 @@ func New() *Server {
 		VotedFor:      "",
 		VotesGranted:  0,
 		State:         Follower,
-		Peers:         []*Server{},
+		Peers:         []Peer{},
 		ElectionTimer: NullTimer{},
 	}
 }
 
-func (server *Server) AddPeer(peer *Server) {
+func (server *Server) AddPeer(peer Peer) {
 	server.Peers = append(server.Peers, peer)
 }
 
