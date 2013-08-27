@@ -1,5 +1,5 @@
 package graft
 
 type Peer interface {
-	ReceiveRequestVote(RequestVoteMessage) VoteResponseMessage
+	ReceiveRequestVote(RequestVoteMessage) (VoteResponseMessage, error)
 }

@@ -57,7 +57,7 @@ func (server *Server) Start() {
 func (server *Server) StartElection() {
 	requestVoteMessage := server.RequestVote()
 	for _, peer := range server.Peers {
-		response := peer.ReceiveRequestVote(requestVoteMessage)
+		response := requestVoteFromPeer(peer, requestVoteMessage)
 		server.ReceiveVoteResponse(response)
 	}
 
@@ -78,7 +78,7 @@ func (server *Server) RequestVote() RequestVoteMessage {
 	}
 }
 
-func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteResponseMessage {
+func (server *Server) ReceiveRequestVote(message RequestVoteMessage) (VoteResponseMessage, error) {
 	if server.Term < message.Term && server.logUpToDate(message) {
 		server.stepDown()
 		server.Term = message.Term
@@ -87,12 +87,12 @@ func (server *Server) ReceiveRequestVote(message RequestVoteMessage) VoteRespons
 		return VoteResponseMessage{
 			Term:        server.Term,
 			VoteGranted: true,
-		}
+		}, nil
 	} else {
 		return VoteResponseMessage{
 			Term:        server.Term,
 			VoteGranted: false,
-		}
+		}, nil
 	}
 }
 
@@ -182,4 +182,13 @@ func (server *Server) updateLog(prevLogIndex int, entries []LogEntry) {
 
 func (server *Server) logUpToDate(message RequestVoteMessage) bool {
 	return server.lastLogIndex() <= message.LastLogIndex && server.lastLogTerm() <= message.LastLogTerm
+}
+
+func requestVoteFromPeer(peer Peer, message RequestVoteMessage) VoteResponseMessage {
+	response, err := peer.ReceiveRequestVote(message)
+	if err != nil {
+		return requestVoteFromPeer(peer, message)
+	}
+
+	return response
 }
