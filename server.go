@@ -21,20 +21,11 @@ type Commiter interface {
 }
 
 type Server struct {
-	Id            string
-	Log           []LogEntry
-	Term          int
-	VotedFor      string
-	VotesGranted  int
-	State         string
-	Peers         []Peer
-	ElectionTimer Timable
-	StateMachine  Commiter
-	CommitIndex   int
+	Voter
 }
 
 func New() *Server {
-	return &Server{
+	serverBase := ServerBase{
 		Id:            "",
 		Log:           []LogEntry{},
 		Term:          0,
@@ -44,65 +35,11 @@ func New() *Server {
 		Peers:         []Peer{},
 		ElectionTimer: NullTimer{},
 	}
-}
-
-func (server *Server) AddPeer(peer Peer) {
-	server.Peers = append(server.Peers, peer)
+	return &Server{Voter{CandidateServer{serverBase}}}
 }
 
 func (server *Server) Start() {
 	server.ElectionTimer.StartTimer()
-}
-
-func (server *Server) StartElection() {
-	requestVoteMessage := server.RequestVote()
-	for _, peer := range server.Peers {
-		response := requestVoteFromPeer(peer, requestVoteMessage)
-		server.ReceiveVoteResponse(response)
-	}
-
-	if server.VotesGranted > (len(server.Peers) / 2) {
-		server.State = Leader
-	}
-}
-
-func (server *Server) RequestVote() RequestVoteMessage {
-	server.State = Candidate
-	server.Term++
-
-	return RequestVoteMessage{
-		Term:         server.Term,
-		CandidateId:  server.Id,
-		LastLogIndex: server.lastLogIndex(),
-		LastLogTerm:  server.lastLogTerm(),
-	}
-}
-
-func (server *Server) ReceiveRequestVote(message RequestVoteMessage) (VoteResponseMessage, error) {
-	if server.Term < message.Term && server.logUpToDate(message) {
-		server.stepDown()
-		server.Term = message.Term
-		server.ElectionTimer.Reset()
-
-		return VoteResponseMessage{
-			Term:        server.Term,
-			VoteGranted: true,
-		}, nil
-	} else {
-		return VoteResponseMessage{
-			Term:        server.Term,
-			VoteGranted: false,
-		}, nil
-	}
-}
-
-func (server *Server) ReceiveVoteResponse(message VoteResponseMessage) {
-	if message.VoteGranted {
-		server.VotesGranted++
-	} else {
-		server.Term = message.Term
-		server.State = Follower
-	}
 }
 
 func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) AppendEntriesResponseMessage {
@@ -145,18 +82,6 @@ func (server *Server) commitTo(i int) {
 
 func (server *Server) lastCommitIndex() int {
 	return server.CommitIndex
-}
-
-func (server *Server) lastLogIndex() int {
-	return len(server.Log)
-}
-
-func (server *Server) lastLogTerm() int {
-	if len(server.Log) == 0 {
-		return 0
-	} else {
-		return (server.Log[len(server.Log)-1]).Term
-	}
 }
 
 func (server *Server) stepDown() {
