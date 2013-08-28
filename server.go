@@ -21,7 +21,7 @@ type Commiter interface {
 }
 
 type Server struct {
-	CandidateServer
+	Voter
 }
 
 func New() *Server {
@@ -35,29 +35,11 @@ func New() *Server {
 		Peers:         []Peer{},
 		ElectionTimer: NullTimer{},
 	}
-	return &Server{CandidateServer{serverBase}}
+	return &Server{Voter{CandidateServer{serverBase}}}
 }
 
 func (server *Server) Start() {
 	server.ElectionTimer.StartTimer()
-}
-
-func (server *Server) ReceiveRequestVote(message RequestVoteMessage) (VoteResponseMessage, error) {
-	if server.Term < message.Term && server.logUpToDate(message) {
-		server.stepDown()
-		server.Term = message.Term
-		server.ElectionTimer.Reset()
-
-		return VoteResponseMessage{
-			Term:        server.Term,
-			VoteGranted: true,
-		}, nil
-	} else {
-		return VoteResponseMessage{
-			Term:        server.Term,
-			VoteGranted: false,
-		}, nil
-	}
 }
 
 func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) AppendEntriesResponseMessage {
