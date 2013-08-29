@@ -21,7 +21,7 @@ type Commiter interface {
 }
 
 type Server struct {
-	Voter
+	FollowerServer
 }
 
 func New() *Server {
@@ -35,49 +35,11 @@ func New() *Server {
 		Peers:         []Peer{},
 		ElectionTimer: NullTimer{},
 	}
-	return &Server{Voter{CandidateServer{serverBase}}}
+	return &Server{FollowerServer{LeaderServer{Voter{CandidateServer{serverBase}}}}}
 }
 
 func (server *Server) Start() {
 	server.ElectionTimer.StartTimer()
-}
-
-func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) AppendEntriesResponseMessage {
-	server.stepDown()
-	if server.Term < message.Term {
-		server.Term = message.Term
-	}
-
-	if server.Term > message.Term || server.invalidLog(message) {
-		return AppendEntriesResponseMessage{
-			Success: false,
-		}
-	}
-
-	server.ElectionTimer.Reset()
-	server.updateLog(message.PrevLogIndex, message.Entries)
-	server.commitTo(message.CommitIndex)
-
-	return AppendEntriesResponseMessage{
-		Success: true,
-	}
-}
-
-func (server *Server) AppendEntries() AppendEntriesMessage {
-	return AppendEntriesMessage{
-		Term:         server.Term,
-		LeaderId:     server.Id,
-		PrevLogIndex: server.lastLogIndex(),
-		Entries:      []LogEntry{},
-		CommitIndex:  server.lastCommitIndex(),
-	}
-}
-
-func (server *Server) commitTo(i int) {
-	if server.CommitIndex == 0 && i > 0 {
-		server.StateMachine.Commit(server.Log[0].Data)
-		server.CommitIndex = 1
-	}
 }
 
 func (server *Server) lastCommitIndex() int {
@@ -94,15 +56,6 @@ func (server *Server) invalidLog(message AppendEntriesMessage) bool {
 	}
 
 	return len(server.Log) < message.PrevLogIndex || server.Log[message.PrevLogIndex-1].Term != message.PrevLogTerm
-}
-
-func (server *Server) updateLog(prevLogIndex int, entries []LogEntry) {
-	if len(server.Log) == 0 {
-		server.Log = entries
-	}
-	for i, entry := range entries {
-		server.Log[i+prevLogIndex] = entry
-	}
 }
 
 func (server *Server) logUpToDate(message RequestVoteMessage) bool {
