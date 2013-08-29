@@ -1,7 +1,7 @@
 package graft
 
 type CandidateServer struct {
-	ServerBase
+	Persister
 }
 
 func (server *CandidateServer) RequestVote() RequestVoteMessage {
