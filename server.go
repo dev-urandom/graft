@@ -35,7 +35,7 @@ func New() *Server {
 		Peers:         []Peer{},
 		ElectionTimer: NullTimer{},
 	}
-	return &Server{FollowerServer{LeaderServer{Voter{CandidateServer{serverBase}}}}}
+	return &Server{FollowerServer{LeaderServer{Voter{CandidateServer{Persister{serverBase}}}}}}
 }
 
 func (server *Server) Start() {
