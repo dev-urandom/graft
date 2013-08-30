@@ -25,13 +25,15 @@ func (server *CandidateServer) StartElection() {
 
 	if server.VotesGranted > (len(server.Peers) / 2) {
 		server.State = Leader
+	} else {
+		server.State = Follower
 	}
 }
 
 func (server *CandidateServer) ReceiveVoteResponse(message VoteResponseMessage) {
 	if message.VoteGranted {
 		server.VotesGranted++
-	} else {
+	} else if server.Term < message.Term {
 		server.Term = message.Term
 		server.State = Follower
 	}

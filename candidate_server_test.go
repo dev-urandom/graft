@@ -53,6 +53,23 @@ func TestReceiveVoteResponseTalliesVoteGranted(t *testing.T) {
 	test.Expect(server.Term).ToEqual(0)
 }
 
+func TestReceiveVoteResponseWithoutGrantingVoteDoesNotTaillyButContinuesTheElection(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	server.Term = 0
+	server.State = Candidate
+
+	server.ReceiveVoteResponse(VoteResponseMessage{
+		VoteGranted: false,
+		Term:        0,
+	})
+
+	test.Expect(server.State).ToEqual(Candidate)
+	test.Expect(server.Term).ToEqual(0)
+	test.Expect(server.VotesGranted).ToEqual(0)
+}
+
 func TestServerCanWinElection(t *testing.T) {
 	test := quiz.Test(t)
 
@@ -107,7 +124,7 @@ func TestServerCanLoseElectionDueToOutOfDateLog(t *testing.T) {
 	serverA.StartElection()
 
 	test.Expect(serverA.State).ToEqual(Follower)
-	test.Expect(serverA.Term).ToEqual(0)
+	test.Expect(serverA.Term).ToEqual(1)
 	test.Expect(serverA.VotesGranted).ToEqual(1)
 
 	test.Expect(serverB.VotedFor).ToEqual("")
