@@ -25,6 +25,8 @@ func (server *ServerBase) lastLogTerm() int {
 	}
 }
 
-func (server *ServerBase) AddPeer(peer Peer) {
-	server.Peers = append(server.Peers, peer)
+func (server *ServerBase) AddPeers(peers ...Peer) {
+	for _, peer := range(peers) {
+		server.Peers = append(server.Peers, peer)
+	}
 }

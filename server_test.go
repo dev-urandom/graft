@@ -90,7 +90,7 @@ func TestServersHavePeers(t *testing.T) {
 	serverA := New()
 	serverB := New()
 
-	serverA.AddPeer(serverB)
+	serverA.AddPeers(serverB)
 
 	test.Expect(serverA.Peers[0]).ToEqual(serverB)
 }

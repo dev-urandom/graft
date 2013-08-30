@@ -76,8 +76,7 @@ func TestServerCanWinElection(t *testing.T) {
 	serverA := New()
 	serverB := New()
 	serverC := New()
-	serverA.AddPeer(serverB)
-	serverA.AddPeer(serverC)
+	serverA.AddPeers(serverB, serverC)
 
 	serverA.StartElection()
 
@@ -95,8 +94,7 @@ func TestServerCanLoseElectionForPeerWithHigherTerm(t *testing.T) {
 	serverA := New()
 	serverB := New()
 	serverC := New()
-	serverA.AddPeer(serverB)
-	serverA.AddPeer(serverC)
+	serverA.AddPeers(serverB, serverC)
 
 	serverB.Term = 2
 
@@ -116,8 +114,7 @@ func TestServerCanLoseElectionDueToOutOfDateLog(t *testing.T) {
 	serverA := New()
 	serverB := New()
 	serverC := New()
-	serverA.AddPeer(serverB)
-	serverA.AddPeer(serverC)
+	serverA.AddPeers(serverB, serverC)
 
 	serverB.Log = []LogEntry{LogEntry{Term: 1, Data: "some data"}}
 
@@ -144,8 +141,7 @@ func TestServerCanWinElectionWithRetries(t *testing.T) {
 		},
 	}
 
-	serverA.AddPeer(serverB)
-	serverA.AddPeer(serverC)
+	serverA.AddPeers(serverB, serverC)
 
 	serverA.StartElection()
 
@@ -164,8 +160,7 @@ func TestServerCanStartAndWinElectionAfterElectionTimeout(t *testing.T) {
 	serverA.ElectionTimer = timer
 	serverB := New()
 	serverC := New()
-	serverA.AddPeer(serverB)
-	serverA.AddPeer(serverC)
+	serverA.AddPeers(serverB, serverC)
 
 	serverA.Start()
 	tiktok.Tick(1)
