@@ -14,20 +14,22 @@ type PersistedServerState struct {
 	CurrentTerm int
 }
 
-func (persister *Persister) PersistLog(filename string) {
+func (persister *Persister) PersistLog(filename string) error {
 	data, _ := json.Marshal(persister.Log)
 	err := ioutil.WriteFile(filename, data, 0644)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
-func (persister *Persister) PersistState(filename string) {
+func (persister *Persister) PersistState(filename string) error {
 	data, _ := json.Marshal(persister.stateToPersist())
 	err := ioutil.WriteFile(filename, data, 0644)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 func (persister *Persister) stateToPersist() PersistedServerState {
