@@ -7,6 +7,26 @@ import (
 	"testing"
 )
 
+func TestPersistReturnsErrorIfWriteFails(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := ServerBase{
+		Id:            "hello",
+		Log:           []LogEntry{LogEntry{Term: 1, Data: "Foo"}, LogEntry{Term: 2, Data: "Bar"}},
+		Term:          1,
+		VotedFor:      "hello",
+		VotesGranted:  0,
+		State:         Candidate,
+		Peers:         []Peer{},
+		ElectionTimer: NullTimer{},
+		CommitIndex:   0,
+	}
+	persister := Persister{server}
+
+	err := persister.PersistLog("/no-way-this-file-exists.log")
+	test.Expect(err != nil).ToBeTrue()
+}
+
 func TestPersistLogWritesLogToDisk(t *testing.T) {
 	test := quiz.Test(t)
 
@@ -69,4 +89,24 @@ func TestPersistServerStateIncludesCurrentTermAndVotedFor(t *testing.T) {
 	json.Unmarshal(file, &state)
 	test.Expect(state.VotedFor).ToEqual("hello")
 	test.Expect(state.CurrentTerm).ToEqual(1)
+}
+
+func TestPersistServerReturnsErrorIfFails(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := ServerBase{
+		Id:            "hello",
+		Log:           []LogEntry{LogEntry{Term: 1, Data: "Foo"}, LogEntry{Term: 2, Data: "Bar"}},
+		Term:          1,
+		VotedFor:      "hello",
+		VotesGranted:  0,
+		State:         Candidate,
+		Peers:         []Peer{},
+		ElectionTimer: NullTimer{},
+		CommitIndex:   0,
+	}
+	persister := Persister{server}
+
+	err := persister.PersistState("/this-file-cant-possibly-exist")
+	test.Expect(err != nil).ToBeTrue()
 }
