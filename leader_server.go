@@ -4,6 +4,17 @@ type LeaderServer struct {
 	Voter
 }
 
+func (server *Server) AppendEntries(data ...string) {
+	message := server.GenerateAppendEntries(data...)
+
+	for _, peer := range server.Peers {
+		peer.ReceiveAppendEntries(message)
+	}
+
+	server.updateLog(message.PrevLogIndex, message.Entries)
+	server.CommitIndex++
+}
+
 func (server *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage {
 	entries := []LogEntry{}
 	for _, d := range(data) {
