@@ -6,13 +6,20 @@ type LeaderServer struct {
 
 func (server *Server) AppendEntries(data ...string) {
 	message := server.GenerateAppendEntries(data...)
+	successfulAppends := 0
 
 	for _, peer := range server.Peers {
-		peer.ReceiveAppendEntries(message)
+		response := peer.ReceiveAppendEntries(message)
+		if response.Success {
+			successfulAppends++
+		}
 	}
 
 	server.updateLog(message.PrevLogIndex, message.Entries)
-	server.CommitIndex++
+
+	if successfulAppends > (len(server.Peers) / 2) {
+		server.CommitIndex++
+	}
 }
 
 func (server *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage {

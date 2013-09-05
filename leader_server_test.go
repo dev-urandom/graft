@@ -66,3 +66,49 @@ func TestAppendEntriesSuccessfully(t *testing.T) {
 	test.Expect(len(followerB.Log)).ToEqual(1)
 	test.Expect(followerB.lastCommitIndex()).ToEqual(0)
 }
+
+func TestAppendEntriesWontCommitWithoutMajority(t *testing.T) {
+	test := quiz.Test(t)
+
+	leader := New()
+	followerA := New()
+	followerB := &FailingPeer{
+		numberOfFails: 1,
+		failureAppendEntriesResponse: AppendEntriesResponseMessage{
+			Success: false,
+		},
+		successfulAppendEntriesResponse: AppendEntriesResponseMessage{
+			Success: true,
+		},
+	}
+	leader.AddPeers(followerA, followerB)
+
+	leader.AppendEntries("foo")
+
+	test.Expect(leader.lastCommitIndex()).ToEqual(0)
+	test.Expect(len(followerA.Log)).ToEqual(1)
+}
+
+func TestAppendEntriesCommitsEvenWithSomeFailures(t *testing.T) {
+	test := quiz.Test(t)
+
+	leader := New()
+	followerA := New()
+	followerB := New()
+	followerC := &FailingPeer{
+		numberOfFails: 1,
+		failureAppendEntriesResponse: AppendEntriesResponseMessage{
+			Success: false,
+		},
+		successfulAppendEntriesResponse: AppendEntriesResponseMessage{
+			Success: true,
+		},
+	}
+	leader.AddPeers(followerA, followerB, followerC)
+
+	leader.AppendEntries("foo")
+
+	test.Expect(leader.lastCommitIndex()).ToEqual(1)
+	test.Expect(len(followerA.Log)).ToEqual(1)
+	test.Expect(len(followerB.Log)).ToEqual(1)
+}
