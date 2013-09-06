@@ -41,6 +41,7 @@ func (peer ChannelPeer) ReceiveAppendEntries(message AppendEntriesMessage) (resp
 }
 
 func (peer ChannelPeer) Start() {
+	peer.server.Start()
 	go func() {
 		for {
 			select {
