@@ -1,24 +1,9 @@
 package graft
 
 import (
-	"errors"
 	"github.com/benmills/quiz"
 	"testing"
 )
-
-type FailingPeer struct {
-	numberOfFails      int
-	successfulResponse VoteResponseMessage
-}
-
-func (peer *FailingPeer) ReceiveRequestVote(message RequestVoteMessage) (VoteResponseMessage, error) {
-	if peer.numberOfFails > 0 {
-		peer.numberOfFails--
-		return VoteResponseMessage{}, errors.New("boom")
-	}
-
-	return peer.successfulResponse, nil
-}
 
 type SpyStateMachine struct {
 	messageChan chan string
