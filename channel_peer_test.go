@@ -51,3 +51,48 @@ func TestChannelPeerRespondsToAppendEntriesMessages(t *testing.T) {
 
 	test.Expect(server.Term).ToEqual(2)
 }
+
+func TestPartitionedPeerRespondsWithError(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	peer := NewChannelPeer(server)
+	peer.Start()
+	defer peer.ShutDown()
+	requestVote := RequestVoteMessage{
+		Term:         1,
+		CandidateId:  "foo",
+		LastLogIndex: 0,
+		LastLogTerm:  0,
+	}
+	peer.Partition()
+	_, err := peer.ReceiveRequestVote(requestVote)
+
+	test.Expect(err != nil).ToBeTrue()
+}
+
+func TestPartitionCanBeHealed(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New()
+	peer := NewChannelPeer(server)
+	peer.Start()
+	defer peer.ShutDown()
+	requestVote := RequestVoteMessage{
+		Term:         1,
+		CandidateId:  "foo",
+		LastLogIndex: 0,
+		LastLogTerm:  0,
+	}
+	peer.Partition()
+	_, err := peer.ReceiveRequestVote(requestVote)
+
+	test.Expect(err != nil).ToBeTrue()
+
+	peer.HealPartition()
+
+	_, err2 := peer.ReceiveRequestVote(requestVote)
+
+	test.Expect(err2).ToEqual(nil)
+
+}
