@@ -88,46 +88,6 @@ func TestServerCanWinElection(t *testing.T) {
 	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
 }
 
-func TestServerCanLoseElectionForPeerWithHigherTerm(t *testing.T) {
-	test := quiz.Test(t)
-
-	serverA := New()
-	serverB := New()
-	serverC := New()
-	serverA.AddPeers(serverB, serverC)
-
-	serverB.Term = 2
-
-	serverA.StartElection()
-
-	test.Expect(serverA.State).ToEqual(Follower)
-	test.Expect(serverA.Term).ToEqual(2)
-	test.Expect(serverA.VotesGranted).ToEqual(1)
-
-	test.Expect(serverB.VotedFor).ToEqual("")
-	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
-}
-
-func TestServerCanLoseElectionDueToOutOfDateLog(t *testing.T) {
-	test := quiz.Test(t)
-
-	serverA := New()
-	serverB := New()
-	serverC := New()
-	serverA.AddPeers(serverB, serverC)
-
-	serverB.Log = []LogEntry{LogEntry{Term: 1, Data: "some data"}}
-
-	serverA.StartElection()
-
-	test.Expect(serverA.State).ToEqual(Follower)
-	test.Expect(serverA.Term).ToEqual(1)
-	test.Expect(serverA.VotesGranted).ToEqual(1)
-
-	test.Expect(serverB.VotedFor).ToEqual("")
-	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
-}
-
 func TestServerCanWinElectionWithRetries(t *testing.T) {
 	test := quiz.Test(t)
 
