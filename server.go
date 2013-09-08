@@ -61,12 +61,3 @@ func (server *Server) invalidLog(message AppendEntriesMessage) bool {
 func (server *Server) logUpToDate(message RequestVoteMessage) bool {
 	return server.lastLogIndex() <= message.LastLogIndex && server.lastLogTerm() <= message.LastLogTerm
 }
-
-func requestVoteFromPeer(peer Peer, message RequestVoteMessage) VoteResponseMessage {
-	response, err := peer.ReceiveRequestVote(message)
-	if err != nil {
-		return requestVoteFromPeer(peer, message)
-	}
-
-	return response
-}

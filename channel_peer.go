@@ -1,5 +1,9 @@
 package graft
 
+import (
+	"errors"
+)
+
 type ChannelPeer struct {
 	requestVoteChan           chan RequestVoteMessage
 	server                    *Server
@@ -7,6 +11,8 @@ type ChannelPeer struct {
 	shutDownChan              chan int
 	appendEntriesChan         chan AppendEntriesMessage
 	appendEntriesResponseChan chan AppendEntriesResponseMessage
+	partitionChan             chan bool
+	errorChan                 chan error
 }
 
 func NewChannelPeer(server *Server) ChannelPeer {
@@ -17,6 +23,8 @@ func NewChannelPeer(server *Server) ChannelPeer {
 		shutDownChan:              make(chan int),
 		appendEntriesChan:         make(chan AppendEntriesMessage),
 		appendEntriesResponseChan: make(chan AppendEntriesResponseMessage),
+		partitionChan:             make(chan bool),
+		errorChan:                 make(chan error),
 	}
 }
 
@@ -25,6 +33,9 @@ func (peer ChannelPeer) ReceiveRequestVote(message RequestVoteMessage) (response
 	for {
 		select {
 		case response = <-peer.voteResponseChan:
+			err = nil
+			return
+		case err = <-peer.errorChan:
 			return
 		}
 	}
@@ -36,26 +47,45 @@ func (peer ChannelPeer) ReceiveAppendEntries(message AppendEntriesMessage) (resp
 		select {
 		case response = <-peer.appendEntriesResponseChan:
 			return
+		default:
+			return
 		}
 	}
 }
 
 func (peer ChannelPeer) Start() {
 	peer.server.Start()
-	go func() {
+	go func(partitioned bool) {
 		for {
 			select {
 			case message := <-peer.requestVoteChan:
-				response, _ := peer.server.ReceiveRequestVote(message)
-				peer.voteResponseChan <- response
+				if partitioned {
+					peer.errorChan <- errors.New("Partitioned")
+				} else {
+					response, _ := peer.server.ReceiveRequestVote(message)
+					peer.voteResponseChan <- response
+				}
 			case message := <-peer.appendEntriesChan:
-				response := peer.server.ReceiveAppendEntries(message)
-				peer.appendEntriesResponseChan <- response
+				if partitioned != true {
+					response := peer.server.ReceiveAppendEntries(message)
+					peer.appendEntriesResponseChan <- response
+				} else {
+					peer.errorChan <- errors.New("Partitioned")
+				}
+			case partitioned = <-peer.partitionChan:
 			case <-peer.shutDownChan:
 				return
 			}
 		}
-	}()
+	}(false)
+}
+
+func (peer ChannelPeer) Partition() {
+	peer.partitionChan <- true
+}
+
+func (peer ChannelPeer) HealPartition() {
+	peer.partitionChan <- false
 }
 
 func (peer ChannelPeer) ShutDown() {
