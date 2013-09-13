@@ -60,7 +60,7 @@ func TestReceiveRequestVoteNotSuccessfulForOutOfDateLogTerm(t *testing.T) {
 	test.Expect(voteResponse.VoteGranted).ToBeFalse()
 }
 
-func TestReceiveRequestVoteUpdatesServerTerm(t *testing.T) {
+func TestReceiveRequestVoteSuccess(t *testing.T) {
 	test := quiz.Test(t)
 
 	server := New()
@@ -75,6 +75,7 @@ func TestReceiveRequestVoteUpdatesServerTerm(t *testing.T) {
 	server.ReceiveRequestVote(message)
 
 	test.Expect(server.Term).ToEqual(2)
+	test.Expect(server.VotedFor).ToEqual("other_server_id")
 }
 
 func TestReceiveRequestVoteResetsElectionTimeout(t *testing.T) {
