@@ -47,7 +47,7 @@ func (peer ChannelPeer) ReceiveAppendEntries(message AppendEntriesMessage) (resp
 		select {
 		case response = <-peer.appendEntriesResponseChan:
 			return
-		default:
+		case err = <-peer.errorChan:
 			return
 		}
 	}

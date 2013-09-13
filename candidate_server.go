@@ -35,7 +35,6 @@ func (server *CandidateServer) StartElection() {
 					electionFinishedChan <- 1
 					return
 				}
-
 			}
 		}
 		electionFinishedChan <- 1

@@ -5,23 +5,59 @@ type LeaderServer struct {
 }
 
 const (
-	appendEntriesMaxRetries = 10
+	appendEntriesMaxRetries = 0
 )
 
 func (server *Server) AppendEntries(data ...string) {
 	message := server.GenerateAppendEntries(data...)
-	successfulAppends := 0
+	successfulAppends := 1
+	appendResponseChan := make(chan AppendEntriesResponseMessage)
+	finishedChan := make(chan bool)
+	failedPeerChan := make(chan int)
+	go func(peercount int) {
+		received := 0
+		for received < peercount {
+			select {
+			case <-failedPeerChan:
+				received++
+			case response := <-appendResponseChan:
+				received++
+				if response.Success {
+					successfulAppends++
+				}
+				if successfulAppends > (peercount / 2) {
+					finishedChan <- true
+					return
+				}
+			}
+		}
+		finishedChan <- false
+		return
+	}(len(server.Peers))
 
 	for _, peer := range server.Peers {
-		if server.sendEntriesToPeerWithRetries(peer, message, appendEntriesMaxRetries) {
-			successfulAppends++
-		}
+		go func(maxFailures int, target Peer) {
+			failureCount := 0
+			for failureCount < maxFailures {
+				response, err := target.ReceiveAppendEntries(message)
+				if err != nil {
+					failureCount++
+				} else {
+					appendResponseChan <- response
+					return
+				}
+			}
+			failedPeerChan <- 0
+			return
+		}(5, peer)
 	}
 
-	server.updateLog(message.PrevLogIndex, message.Entries)
-
-	if successfulAppends > (len(server.Peers) / 2) {
-		server.CommitIndex++
+	select {
+	case success := <-finishedChan:
+		if success {
+			server.updateLog(message.PrevLogIndex, message.Entries)
+			server.CommitIndex++
+		}
 	}
 }
 
@@ -38,18 +74,4 @@ func (server *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage
 		Entries:      entries,
 		CommitIndex:  server.lastCommitIndex(),
 	}
-}
-
-func (server *Server) sendEntriesToPeerWithRetries(peer Peer, message AppendEntriesMessage, retries int) bool {
-	response, _ := peer.ReceiveAppendEntries(message)
-	if response.Success {
-		return true
-	}
-
-	if retries > 0 {
-		retries--
-		return server.sendEntriesToPeerWithRetries(peer, message, retries)
-	}
-
-	return false
 }

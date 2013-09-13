@@ -42,6 +42,29 @@ func TestA3NodeClusterElectsTheFirstNodeToCallForElection(t *testing.T) {
 	test.Expect(peer1.server.State).ToEqual(Leader)
 }
 
+func TestStartElectionIsLiveWith2FailingNodes(t *testing.T) {
+	test := quiz.Test(t)
+	peer1, _ := NewPeerWithControlledTimeout("server1", 2)
+	peer2, _ := NewPeerWithControlledTimeout("server2", 9)
+	peer3, _ := NewPeerWithControlledTimeout("server3", 9)
+	peer1.server.Peers = []Peer{peer2, peer3}
+	peer2.server.Peers = []Peer{peer1, peer3}
+	peer3.server.Peers = []Peer{peer1, peer2}
+	peer1.Start()
+	peer2.Start()
+	peer2.Partition()
+	peer3.Start()
+	peer3.Partition()
+
+	peer1.server.StartElection()
+
+	peer1.ShutDown()
+	peer2.ShutDown()
+	peer3.ShutDown()
+
+	test.Expect(peer1.server.State).ToEqual(Follower)
+}
+
 func TestA5NodeClusterCanElectLeaderIf2NodesPartitioned(t *testing.T) {
 	test := quiz.Test(t)
 	peer1, timer1 := NewPeerWithControlledTimeout("server1", 2)
@@ -153,4 +176,54 @@ func TestHttpElection(t *testing.T) {
 
 	test.Expect(serverC.VotedFor).ToEqual("A")
 	test.Expect(serverC.Term).ToEqual(1)
+}
+
+func TestCanCommitAcrossA3NodeCluster(t *testing.T) {
+	test := quiz.Test(t)
+
+	serverA := New("A")
+	serverB := New("B")
+	serverC := New("C")
+
+	listenerA := httptest.NewServer(HttpHandler{serverA}.Handler())
+	defer listenerA.Close()
+	listenerB := httptest.NewServer(HttpHandler{serverB}.Handler())
+	defer listenerB.Close()
+	listenerC := httptest.NewServer(HttpHandler{serverC}.Handler())
+	defer listenerC.Close()
+
+	serverA.AddPeers(HttpPeer{listenerB.URL}, HttpPeer{listenerC.URL})
+	serverB.AddPeers(HttpPeer{listenerA.URL}, HttpPeer{listenerC.URL})
+	serverC.AddPeers(HttpPeer{listenerA.URL}, HttpPeer{listenerB.URL})
+
+	serverA.StartElection()
+
+	serverA.AppendEntries("foo")
+
+	test.Expect(serverA.CommitIndex).ToEqual(1)
+}
+
+func TestCannotCommitAcrossA3NodeClusterIfTwoNodesArePartitioned(t *testing.T) {
+	test := quiz.Test(t)
+	peer1, _ := NewPeerWithControlledTimeout("server1", 2)
+	peer2, _ := NewPeerWithControlledTimeout("server2", 9)
+	peer3, _ := NewPeerWithControlledTimeout("server3", 9)
+	peer1.server.Peers = []Peer{peer2, peer3}
+	peer2.server.Peers = []Peer{peer1, peer3}
+	peer3.server.Peers = []Peer{peer1, peer2}
+	peer1.Start()
+	peer2.Start()
+	peer3.Start()
+
+	peer1.server.StartElection()
+
+	peer2.Partition()
+	peer3.Partition()
+
+	peer1.server.AppendEntries("foo")
+	peer1.ShutDown()
+	peer2.ShutDown()
+	peer3.ShutDown()
+
+	test.Expect(peer1.server.CommitIndex).ToEqual(0)
 }

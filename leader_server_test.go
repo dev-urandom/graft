@@ -71,7 +71,15 @@ func TestAppendEntriesWontCommitWithoutMajority(t *testing.T) {
 	test := quiz.Test(t)
 
 	leader := New("id")
-	followerA := New("id")
+	followerA := &FailingPeer{
+		numberOfFails: -1,
+		failureAppendEntriesResponse: AppendEntriesResponseMessage{
+			Success: false,
+		},
+		successfulAppendEntriesResponse: AppendEntriesResponseMessage{
+			Success: true,
+		},
+	}
 	followerB := &FailingPeer{
 		numberOfFails: -1,
 		failureAppendEntriesResponse: AppendEntriesResponseMessage{
@@ -86,7 +94,7 @@ func TestAppendEntriesWontCommitWithoutMajority(t *testing.T) {
 	leader.AppendEntries("foo")
 
 	test.Expect(leader.lastCommitIndex()).ToEqual(0)
-	test.Expect(len(followerA.Log)).ToEqual(1)
+	test.Expect(len(followerA.Log)).ToEqual(0)
 	test.Expect(len(followerB.Log)).ToEqual(0)
 }
 
@@ -113,27 +121,4 @@ func TestAppendEntriesCommitsEvenWithSomeFailures(t *testing.T) {
 	test.Expect(len(followerA.Log)).ToEqual(1)
 	test.Expect(len(followerB.Log)).ToEqual(1)
 	test.Expect(len(followerC.Log)).ToEqual(0)
-}
-
-func TestAppendEntriesWillRetry(t *testing.T) {
-	test := quiz.Test(t)
-
-	leader := New("id")
-	followerA := New("id")
-	followerB := &FailingPeer{
-		numberOfFails: 1,
-		failureAppendEntriesResponse: AppendEntriesResponseMessage{
-			Success: false,
-		},
-		successfulAppendEntriesResponse: AppendEntriesResponseMessage{
-			Success: true,
-		},
-	}
-	leader.AddPeers(followerA, followerB)
-
-	leader.AppendEntries("foo")
-
-	test.Expect(leader.lastCommitIndex()).ToEqual(1)
-	test.Expect(len(followerA.Log)).ToEqual(1)
-	test.Expect(len(followerB.Log)).ToEqual(1)
 }
