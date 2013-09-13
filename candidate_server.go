@@ -18,6 +18,7 @@ func (server *CandidateServer) RequestVote() RequestVoteMessage {
 
 func (server *CandidateServer) StartElection() {
 	requestVoteMessage := server.RequestVote()
+	server.VotedFor = server.Id
 	receiveVoteChan := make(chan VoteResponseMessage)
 	electionFinishedChan := make(chan int)
 	failedPeerChan := make(chan int)

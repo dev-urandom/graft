@@ -84,6 +84,7 @@ func TestServerCanWinElection(t *testing.T) {
 	test.Expect(serverA.Term).ToEqual(1)
 	test.Expect(serverA.VotesGranted).ToEqual(2)
 
+	test.Expect(serverA.VotedFor).ToEqual(serverA.Id)
 	test.Expect(serverB.VotedFor).ToEqual(serverA.Id)
 	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
 }
