@@ -27,7 +27,7 @@ func (server *Server) AppendEntries(data ...string) {
 
 func (server *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage {
 	entries := []LogEntry{}
-	for _, d := range(data) {
+	for _, d := range data {
 		entries = append(entries, LogEntry{Term: server.Term, Data: d})
 	}
 
@@ -41,15 +41,15 @@ func (server *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage
 }
 
 func (server *Server) sendEntriesToPeerWithRetries(peer Peer, message AppendEntriesMessage, retries int) bool {
-		response := peer.ReceiveAppendEntries(message)
-		if response.Success {
-			return true
-		}
+	response, _ := peer.ReceiveAppendEntries(message)
+	if response.Success {
+		return true
+	}
 
-		if retries > 0 {
-			retries--
-			return server.sendEntriesToPeerWithRetries(peer, message, retries)
-		}
+	if retries > 0 {
+		retries--
+		return server.sendEntriesToPeerWithRetries(peer, message, retries)
+	}
 
-		return false
+	return false
 }

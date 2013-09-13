@@ -2,5 +2,5 @@ package graft
 
 type Peer interface {
 	ReceiveRequestVote(RequestVoteMessage) (VoteResponseMessage, error)
-	ReceiveAppendEntries(AppendEntriesMessage) AppendEntriesResponseMessage
+	ReceiveAppendEntries(AppendEntriesMessage) (AppendEntriesResponseMessage, error)
 }
