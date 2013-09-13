@@ -49,3 +49,46 @@ func TestHttpHandlerWillRespondWith422OnBadMessage(t *testing.T) {
 
 	test.Expect(response.StatusCode).ToEqual(422)
 }
+
+func TestHttpHandlerWillRespondToAppendEntries(t *testing.T) {
+	test := quiz.Test(t)
+	server := New()
+	handler := HttpHandler{server}
+
+	listener := httptest.NewServer(handler.Handler())
+	defer listener.Close()
+
+	message := AppendEntriesMessage{
+		Term:         1,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 0,
+		PrevLogTerm:  0,
+		Entries:      []LogEntry{LogEntry{1, "foo"}},
+		CommitIndex:  0,
+	}
+	body, _ := json.Marshal(message)
+
+	response := telephone.Post(listener.URL+"/append_entries", string(body))
+
+	test.Expect(response.StatusCode).ToEqual(200)
+	test.Expect(server.Term).ToEqual(1)
+	test.Expect(server.Log).ToContain("foo")
+
+	var responseMessage AppendEntriesResponseMessage
+	json.Unmarshal([]byte(response.ParsedBody), &responseMessage)
+
+	test.Expect(responseMessage.Success).ToBeTrue()
+}
+
+func TestHttpHandlerWillRespondToAppendEntriesWithA422OnBadMessage(t *testing.T) {
+	test := quiz.Test(t)
+	server := New()
+	handler := HttpHandler{server}
+
+	listener := httptest.NewServer(handler.Handler())
+	defer listener.Close()
+
+	response := telephone.Post(listener.URL+"/append_entries", "bad_message")
+
+	test.Expect(response.StatusCode).ToEqual(422)
+}
