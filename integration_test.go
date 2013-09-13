@@ -3,6 +3,7 @@ package graft
 import (
 	"github.com/benmills/quiz"
 	"github.com/wjdix/tiktok"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -121,4 +122,35 @@ func TestA5NodeClusterWillEndAnElectionEarlyUnderAPartitionDueToHigherTerm(t *te
 
 	test.Expect(peer1.server.State).ToEqual(Follower)
 	test.Expect(peer1.server.Term).ToEqual(2)
+}
+
+func TestHttpElection(t *testing.T) {
+	test := quiz.Test(t)
+
+	serverA := New("A")
+	serverB := New("B")
+	serverC := New("C")
+
+	listenerA := httptest.NewServer(HttpHandler{serverA}.Handler())
+	defer listenerA.Close()
+	listenerB := httptest.NewServer(HttpHandler{serverB}.Handler())
+	defer listenerB.Close()
+	listenerC := httptest.NewServer(HttpHandler{serverC}.Handler())
+	defer listenerC.Close()
+
+	serverA.AddPeers(HttpPeer{listenerB.URL}, HttpPeer{listenerC.URL})
+	serverB.AddPeers(HttpPeer{listenerA.URL}, HttpPeer{listenerC.URL})
+	serverC.AddPeers(HttpPeer{listenerA.URL}, HttpPeer{listenerB.URL})
+
+	serverA.StartElection()
+
+	test.Expect(serverA.State).ToEqual(Leader)
+	test.Expect(serverA.VotedFor).ToEqual("A")
+	test.Expect(serverA.Term).ToEqual(1)
+
+	test.Expect(serverB.VotedFor).ToEqual("A")
+	test.Expect(serverB.Term).ToEqual(1)
+
+	test.Expect(serverC.VotedFor).ToEqual("A")
+	test.Expect(serverC.Term).ToEqual(1)
 }

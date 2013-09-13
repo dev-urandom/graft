@@ -12,8 +12,8 @@ type HttpHandler struct {
 }
 
 func extractMessage(r *http.Request, message interface{}) error {
-		body, _ := ioutil.ReadAll(r.Body)
-		return json.Unmarshal(body, message)
+	body, _ := ioutil.ReadAll(r.Body)
+	return json.Unmarshal(body, message)
 }
 
 func (handler HttpHandler) Handler() http.Handler {
