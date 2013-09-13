@@ -41,7 +41,7 @@ func (peer ChannelPeer) ReceiveRequestVote(message RequestVoteMessage) (response
 	}
 }
 
-func (peer ChannelPeer) ReceiveAppendEntries(message AppendEntriesMessage) (response AppendEntriesResponseMessage) {
+func (peer ChannelPeer) ReceiveAppendEntries(message AppendEntriesMessage) (response AppendEntriesResponseMessage, err error) {
 	peer.appendEntriesChan <- message
 	for {
 		select {
@@ -67,7 +67,7 @@ func (peer ChannelPeer) Start() {
 				}
 			case message := <-peer.appendEntriesChan:
 				if partitioned != true {
-					response := peer.server.ReceiveAppendEntries(message)
+					response, _ := peer.server.ReceiveAppendEntries(message)
 					peer.appendEntriesResponseChan <- response
 				} else {
 					peer.errorChan <- errors.New("Partitioned")
