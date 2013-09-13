@@ -37,7 +37,7 @@ func fakeRemoteServer() *httptest.Server {
 
 func TestHttpPeerCanBeAddedToAServersListOfPeers(t *testing.T) {
 	peer := NewHttpPeer("http://localhost:4040")
-	server2 := New()
+	server2 := New("id")
 	server2.Peers = []Peer{peer}
 }
 

@@ -8,7 +8,7 @@ import (
 func TestReceiveRequestVoteNotSuccessfulForSmallerTerm(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Term = 2
 	message := RequestVoteMessage{
 		Term:         1,
@@ -26,7 +26,7 @@ func TestReceiveRequestVoteNotSuccessfulForSmallerTerm(t *testing.T) {
 func TestReceiveRequestVoteNotSuccessfulForOutOfDateLogIndex(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Log = []LogEntry{LogEntry{Term: 0, Data: "some data"}}
 
 	message := RequestVoteMessage{
@@ -44,7 +44,7 @@ func TestReceiveRequestVoteNotSuccessfulForOutOfDateLogIndex(t *testing.T) {
 func TestReceiveRequestVoteNotSuccessfulForOutOfDateLogTerm(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Term = 1
 	server.Log = []LogEntry{LogEntry{Term: 1, Data: "some data"}}
 
@@ -63,7 +63,7 @@ func TestReceiveRequestVoteNotSuccessfulForOutOfDateLogTerm(t *testing.T) {
 func TestReceiveRequestVoteSuccess(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Term = 1
 	message := RequestVoteMessage{
 		Term:         2,
@@ -81,7 +81,7 @@ func TestReceiveRequestVoteSuccess(t *testing.T) {
 func TestReceiveRequestVoteResetsElectionTimeout(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Term = 1
 	timer := SpyTimer{make(chan int)}
 	server.ElectionTimer = timer
@@ -114,7 +114,7 @@ func TestReceiveRequestVoteResetsElectionTimeout(t *testing.T) {
 func TestReceiveRequestVoteWithHigherTermCausesVoterToStepDown(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Term = 1
 	server.State = Candidate
 	message := RequestVoteMessage{

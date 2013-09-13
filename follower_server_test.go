@@ -8,7 +8,7 @@ import (
 func TestAppendEntriesFailsWhenReceivedTermIsLessThanCurrentTerm(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Term = 3
 
 	message := AppendEntriesMessage{
@@ -27,7 +27,7 @@ func TestAppendEntriesFailsWhenReceivedTermIsLessThanCurrentTerm(t *testing.T) {
 func TestAppendEntiesFailsWhenLogContainsNothingAtPrevLogIndex(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 
 	message := AppendEntriesMessage{
 		Term:         2,
@@ -46,7 +46,7 @@ func TestAppendEntiesFailsWhenLogContainsNothingAtPrevLogIndex(t *testing.T) {
 func TestAppendEntriesFailsWhenLogDoesNotContainEntryAtPrevLogIndexMatchingPrevLogTerm(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Log = []LogEntry{LogEntry{Term: 1, Data: "data"}}
 
 	message := AppendEntriesMessage{
@@ -66,7 +66,7 @@ func TestAppendEntriesFailsWhenLogDoesNotContainEntryAtPrevLogIndexMatchingPrevL
 func TestSuccessfulAppendEntriesResetsElectionTimer(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	timer := SpyTimer{make(chan int)}
 	server.ElectionTimer = timer
 	message := AppendEntriesMessage{
@@ -100,7 +100,7 @@ func TestSuccessfulAppendEntriesResetsElectionTimer(t *testing.T) {
 func TestAppendEntriesSucceedsWhenHeartbeatingOnAnEmptyLog(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	message := AppendEntriesMessage{
 		Term:         1,
 		LeaderId:     "leader_id",
@@ -118,7 +118,7 @@ func TestAppendEntriesSucceedsWhenHeartbeatingOnAnEmptyLog(t *testing.T) {
 func TestAppendEntriesCommitsToStateMachineBasedOnCommitIndex(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	messageChan := make(chan string)
 	stateMachine := SpyStateMachine{messageChan}
 	shutdownChan := make(chan int)
@@ -152,7 +152,7 @@ func TestAppendEntriesCommitsToStateMachineBasedOnCommitIndex(t *testing.T) {
 func TestTermUpdatesWhenReceivingHigherTermInAppendEntries(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 
 	message := AppendEntriesMessage{
 		Term:         2,
@@ -170,7 +170,7 @@ func TestTermUpdatesWhenReceivingHigherTermInAppendEntries(t *testing.T) {
 func TestCandidateStepsDownWhenReceivingAppendEntriesMessage(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.State = Candidate
 
 	message := AppendEntriesMessage{
@@ -189,7 +189,7 @@ func TestCandidateStepsDownWhenReceivingAppendEntriesMessage(t *testing.T) {
 func TestLeaderStepsDownWhenReceivingAppendEntriesMessage(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.State = Leader
 
 	message := AppendEntriesMessage{
@@ -208,7 +208,7 @@ func TestLeaderStepsDownWhenReceivingAppendEntriesMessage(t *testing.T) {
 func TestServerDeletesConflictingEntriesWhenReceivingAppendEntriesMessage(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Log = []LogEntry{LogEntry{Term: 1, Data: "bad"}}
 
 	message := AppendEntriesMessage{

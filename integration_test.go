@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-func NewPeerWithControlledTimeout(timeoutLength time.Duration) (ChannelPeer, *ElectionTimer) {
-	server := New()
+func NewPeerWithControlledTimeout(id string, timeoutLength time.Duration) (ChannelPeer, *ElectionTimer) {
+	server := New(id)
 	timer := NewElectionTimer(timeoutLength, server)
 	timer.tickerBuilder = FakeTicker
 	return NewChannelPeer(server), timer
@@ -16,15 +16,12 @@ func NewPeerWithControlledTimeout(timeoutLength time.Duration) (ChannelPeer, *El
 
 func TestA3NodeClusterElectsTheFirstNodeToCallForElection(t *testing.T) {
 	test := quiz.Test(t)
-	peer1, timer1 := NewPeerWithControlledTimeout(2)
-	peer2, timer2 := NewPeerWithControlledTimeout(9)
-	peer3, timer3 := NewPeerWithControlledTimeout(9)
+	peer1, timer1 := NewPeerWithControlledTimeout("server1", 2)
+	peer2, timer2 := NewPeerWithControlledTimeout("server2", 9)
+	peer3, timer3 := NewPeerWithControlledTimeout("server3", 9)
 	peer1.server.Peers = []Peer{peer2, peer3}
-	peer1.server.Id = "server1"
 	peer2.server.Peers = []Peer{peer1, peer3}
-	peer2.server.Id = "server2"
 	peer3.server.Peers = []Peer{peer1, peer2}
-	peer3.server.Id = "server3"
 	peer1.Start()
 	timer1.StartTimer()
 	peer2.Start()
@@ -46,16 +43,11 @@ func TestA3NodeClusterElectsTheFirstNodeToCallForElection(t *testing.T) {
 
 func TestA5NodeClusterCanElectLeaderIf2NodesPartitioned(t *testing.T) {
 	test := quiz.Test(t)
-	peer1, timer1 := NewPeerWithControlledTimeout(2)
-	peer2, timer2 := NewPeerWithControlledTimeout(9)
-	peer3, timer3 := NewPeerWithControlledTimeout(9)
-	peer4, timer4 := NewPeerWithControlledTimeout(9)
-	peer5, timer5 := NewPeerWithControlledTimeout(9)
-	peer1.server.Id = "server1"
-	peer2.server.Id = "server2"
-	peer3.server.Id = "server3"
-	peer4.server.Id = "server4"
-	peer5.server.Id = "server5"
+	peer1, timer1 := NewPeerWithControlledTimeout("server1", 2)
+	peer2, timer2 := NewPeerWithControlledTimeout("server2", 9)
+	peer3, timer3 := NewPeerWithControlledTimeout("server3", 9)
+	peer4, timer4 := NewPeerWithControlledTimeout("server4", 9)
+	peer5, timer5 := NewPeerWithControlledTimeout("server5", 9)
 	peer1.server.Peers = []Peer{peer2, peer3, peer4, peer5}
 	peer1.Start()
 	timer1.StartTimer()
@@ -89,16 +81,11 @@ func TestA5NodeClusterCanElectLeaderIf2NodesPartitioned(t *testing.T) {
 
 func TestA5NodeClusterWillEndAnElectionEarlyUnderAPartitionDueToHigherTerm(t *testing.T) {
 	test := quiz.Test(t)
-	peer1, timer1 := NewPeerWithControlledTimeout(2)
-	peer2, timer2 := NewPeerWithControlledTimeout(9)
-	peer3, timer3 := NewPeerWithControlledTimeout(9)
-	peer4, timer4 := NewPeerWithControlledTimeout(9)
-	peer5, timer5 := NewPeerWithControlledTimeout(9)
-	peer1.server.Id = "server1"
-	peer2.server.Id = "server2"
-	peer3.server.Id = "server3"
-	peer4.server.Id = "server4"
-	peer5.server.Id = "server5"
+	peer1, timer1 := NewPeerWithControlledTimeout("server1", 2)
+	peer2, timer2 := NewPeerWithControlledTimeout("server2", 9)
+	peer3, timer3 := NewPeerWithControlledTimeout("server3", 9)
+	peer4, timer4 := NewPeerWithControlledTimeout("server4", 9)
+	peer5, timer5 := NewPeerWithControlledTimeout("server5", 9)
 	peer1.server.Peers = []Peer{peer2, peer3, peer4, peer5}
 
 	// peer3 lead before 4 and 5 were partitioned

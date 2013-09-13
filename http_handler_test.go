@@ -10,7 +10,7 @@ import (
 
 func TestHttpHandlerWillRespondToRequestVote(t *testing.T) {
 	test := quiz.Test(t)
-	server := New()
+	server := New("id")
 	handler := HttpHandler{server}
 
 	listener := httptest.NewServer(handler.Handler())
@@ -39,7 +39,7 @@ func TestHttpHandlerWillRespondToRequestVote(t *testing.T) {
 
 func TestHttpHandlerWillRespondWith422OnBadMessage(t *testing.T) {
 	test := quiz.Test(t)
-	server := New()
+	server := New("id")
 	handler := HttpHandler{server}
 
 	listener := httptest.NewServer(handler.Handler())
@@ -52,7 +52,7 @@ func TestHttpHandlerWillRespondWith422OnBadMessage(t *testing.T) {
 
 func TestHttpHandlerWillRespondToAppendEntries(t *testing.T) {
 	test := quiz.Test(t)
-	server := New()
+	server := New("id")
 	handler := HttpHandler{server}
 
 	listener := httptest.NewServer(handler.Handler())
@@ -82,7 +82,7 @@ func TestHttpHandlerWillRespondToAppendEntries(t *testing.T) {
 
 func TestHttpHandlerWillRespondToAppendEntriesWithA422OnBadMessage(t *testing.T) {
 	test := quiz.Test(t)
-	server := New()
+	server := New("id")
 	handler := HttpHandler{server}
 
 	listener := httptest.NewServer(handler.Handler())

@@ -6,16 +6,16 @@ import (
 )
 
 func TestChannelPeerCanBeAddedToAServersListOfPeers(t *testing.T) {
-	server := New()
+	server := New("id")
 	peer := NewChannelPeer(server)
-	server2 := New()
+	server2 := New("id")
 	server2.Peers = []Peer{peer}
 }
 
 func TestChannelPeerRespondsToVoteMessages(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	peer := NewChannelPeer(server)
 	peer.Start()
 	defer peer.ShutDown()
@@ -35,7 +35,7 @@ func TestChannelPeerRespondsToVoteMessages(t *testing.T) {
 func TestChannelPeerRespondsToAppendEntriesMessages(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	peer := NewChannelPeer(server)
 	peer.Start()
 	defer peer.ShutDown()
@@ -55,7 +55,7 @@ func TestChannelPeerRespondsToAppendEntriesMessages(t *testing.T) {
 func TestPartitionedPeerRespondsWithError(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	peer := NewChannelPeer(server)
 	peer.Start()
 	defer peer.ShutDown()
@@ -74,7 +74,7 @@ func TestPartitionedPeerRespondsWithError(t *testing.T) {
 func TestPartitionCanBeHealed(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	peer := NewChannelPeer(server)
 	peer.Start()
 	defer peer.ShutDown()

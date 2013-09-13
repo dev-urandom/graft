@@ -8,7 +8,7 @@ import (
 func TestGenerateAppendEntriesMessage(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 
 	message := server.GenerateAppendEntries()
 
@@ -22,7 +22,7 @@ func TestGenerateAppendEntriesMessage(t *testing.T) {
 func TestGenerateAppendEntriesMessageWithData(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 
 	message := server.GenerateAppendEntries("foo")
 
@@ -34,7 +34,7 @@ func TestGenerateAppendEntriesMessageWithData(t *testing.T) {
 func TestGenerateAppendEntriesMessageWithMultipleEntries(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 
 	message := server.GenerateAppendEntries("foo", "bar")
 
@@ -46,9 +46,9 @@ func TestGenerateAppendEntriesMessageWithMultipleEntries(t *testing.T) {
 func TestAppendEntriesSuccessfully(t *testing.T) {
 	test := quiz.Test(t)
 
-	leader := New()
-	followerA := New()
-	followerB := New()
+	leader := New("id")
+	followerA := New("id")
+	followerB := New("id")
 	leader.AddPeers(followerA, followerB)
 
 	leader.AppendEntries("foo")
@@ -70,8 +70,8 @@ func TestAppendEntriesSuccessfully(t *testing.T) {
 func TestAppendEntriesWontCommitWithoutMajority(t *testing.T) {
 	test := quiz.Test(t)
 
-	leader := New()
-	followerA := New()
+	leader := New("id")
+	followerA := New("id")
 	followerB := &FailingPeer{
 		numberOfFails: -1,
 		failureAppendEntriesResponse: AppendEntriesResponseMessage{
@@ -93,9 +93,9 @@ func TestAppendEntriesWontCommitWithoutMajority(t *testing.T) {
 func TestAppendEntriesCommitsEvenWithSomeFailures(t *testing.T) {
 	test := quiz.Test(t)
 
-	leader := New()
-	followerA := New()
-	followerB := New()
+	leader := New("id")
+	followerA := New("id")
+	followerB := New("id")
 	followerC := &FailingPeer{
 		numberOfFails: -1,
 		failureAppendEntriesResponse: AppendEntriesResponseMessage{
@@ -118,8 +118,8 @@ func TestAppendEntriesCommitsEvenWithSomeFailures(t *testing.T) {
 func TestAppendEntriesWillRetry(t *testing.T) {
 	test := quiz.Test(t)
 
-	leader := New()
-	followerA := New()
+	leader := New("id")
+	followerA := New("id")
 	followerB := &FailingPeer{
 		numberOfFails: 1,
 		failureAppendEntriesResponse: AppendEntriesResponseMessage{

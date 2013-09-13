@@ -26,35 +26,35 @@ func (timer SpyTimer) StartTimer() {}
 func TestNewServerHasEmptyEntries(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	test.Expect(len(server.Log)).ToEqual(0)
 }
 
 func TestNewServerStartsAtZeroTerm(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	test.Expect(server.Term).ToEqual(0)
 }
 
 func TestNewServerStartsWithEmptyVotedFor(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	test.Expect(server.VotedFor).ToEqual("")
 }
 
 func TestNewServerStartsAsFollower(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	test.Expect(server.State).ToEqual(Follower)
 }
 
 func TestLastLogTermDerivedFromLogEntries(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Log = []LogEntry{LogEntry{Term: 1, Data: "test"}, LogEntry{Term: 2, Data: "foo"}}
 
 	test.Expect(server.lastLogTerm()).ToEqual(2)
@@ -63,7 +63,7 @@ func TestLastLogTermDerivedFromLogEntries(t *testing.T) {
 func TestReceiveVoteResponseReturnsAnError(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	_, err := server.ReceiveRequestVote(RequestVoteMessage{})
 
 	test.Expect(err).ToEqual(nil)
@@ -72,8 +72,8 @@ func TestReceiveVoteResponseReturnsAnError(t *testing.T) {
 func TestServersHavePeers(t *testing.T) {
 	test := quiz.Test(t)
 
-	serverA := New()
-	serverB := New()
+	serverA := New("id")
+	serverB := New("id")
 
 	serverA.AddPeers(serverB)
 

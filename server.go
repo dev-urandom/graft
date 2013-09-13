@@ -24,9 +24,9 @@ type Server struct {
 	FollowerServer
 }
 
-func New() *Server {
+func New(id string) *Server {
 	serverBase := ServerBase{
-		Id:            "",
+		Id:            id,
 		Log:           []LogEntry{},
 		Term:          0,
 		VotedFor:      "",

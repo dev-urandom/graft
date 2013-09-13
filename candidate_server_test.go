@@ -9,7 +9,7 @@ import (
 func TestGenerateRequestVoteDerivedFromLog(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Log = []LogEntry{LogEntry{Term: 1, Data: "test"}, LogEntry{Term: 1, Data: "foo"}}
 	newRequestVote := server.RequestVote()
 
@@ -22,7 +22,7 @@ func TestGenerateRequestVoteDerivedFromLog(t *testing.T) {
 func TestReceiveVoteResponseEndsElectionForHigherTerm(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Term = 0
 	server.State = Candidate
 
@@ -39,7 +39,7 @@ func TestReceiveVoteResponseEndsElectionForHigherTerm(t *testing.T) {
 func TestReceiveVoteResponseTalliesVoteGranted(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Term = 0
 	server.State = Candidate
 
@@ -56,7 +56,7 @@ func TestReceiveVoteResponseTalliesVoteGranted(t *testing.T) {
 func TestReceiveVoteResponseWithoutGrantingVoteDoesNotTaillyButContinuesTheElection(t *testing.T) {
 	test := quiz.Test(t)
 
-	server := New()
+	server := New("id")
 	server.Term = 0
 	server.State = Candidate
 
@@ -73,9 +73,9 @@ func TestReceiveVoteResponseWithoutGrantingVoteDoesNotTaillyButContinuesTheElect
 func TestServerCanWinElection(t *testing.T) {
 	test := quiz.Test(t)
 
-	serverA := New()
-	serverB := New()
-	serverC := New()
+	serverA := New("id")
+	serverB := New("id")
+	serverC := New("id")
 	serverA.AddPeers(serverB, serverC)
 
 	serverA.StartElection()
@@ -91,8 +91,8 @@ func TestServerCanWinElection(t *testing.T) {
 func TestServerCanWinElectionWithRetries(t *testing.T) {
 	test := quiz.Test(t)
 
-	serverA := New()
-	serverB := New()
+	serverA := New("id")
+	serverB := New("id")
 	serverC := &FailingPeer{
 		numberOfFails: 1,
 		successfulResponse: VoteResponseMessage{
@@ -113,13 +113,13 @@ func TestServerCanWinElectionWithRetries(t *testing.T) {
 func TestServerCanStartAndWinElectionAfterElectionTimeout(t *testing.T) {
 	test := quiz.Test(t)
 
-	serverA := New()
+	serverA := New("id")
 	timer := NewElectionTimer(1, serverA)
 	timer.tickerBuilder = FakeTicker
 	defer tiktok.ClearTickers()
 	serverA.ElectionTimer = timer
-	serverB := New()
-	serverC := New()
+	serverB := New("id")
+	serverC := New("id")
 	serverA.AddPeers(serverB, serverC)
 
 	serverA.Start()
