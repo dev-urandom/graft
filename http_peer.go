@@ -15,7 +15,19 @@ func NewHttpPeer(url string) HttpPeer {
 }
 
 func (peer HttpPeer) ReceiveAppendEntries(message AppendEntriesMessage) AppendEntriesResponseMessage {
-	return AppendEntriesResponseMessage{}
+	var responseMessage AppendEntriesResponseMessage
+	body, _ := json.Marshal(message)
+	request := telephone.Request{
+		Url:  peer.URL + "/append_entries",
+		Body: string(body),
+	}
+
+	response := request.Post()
+	if !response.Success {
+		return responseMessage
+	}
+	json.Unmarshal([]byte(response.ParsedBody), &responseMessage)
+	return responseMessage
 }
 
 func (peer HttpPeer) ReceiveRequestVote(message RequestVoteMessage) (VoteResponseMessage, error) {
