@@ -4,7 +4,7 @@ type FollowerServer struct {
 	LeaderServer
 }
 
-func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) AppendEntriesResponseMessage {
+func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) (AppendEntriesResponseMessage, error) {
 	server.stepDown()
 	if server.Term < message.Term {
 		server.Term = message.Term
@@ -13,7 +13,7 @@ func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) AppendE
 	if server.Term > message.Term || server.invalidLog(message) {
 		return AppendEntriesResponseMessage{
 			Success: false,
-		}
+		}, nil
 	}
 
 	server.ElectionTimer.Reset()
@@ -22,7 +22,7 @@ func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) AppendE
 
 	return AppendEntriesResponseMessage{
 		Success: true,
-	}
+	}, nil
 }
 
 func (server *Server) commitTo(i int) {

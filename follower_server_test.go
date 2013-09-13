@@ -19,7 +19,7 @@ func TestAppendEntriesFailsWhenReceivedTermIsLessThanCurrentTerm(t *testing.T) {
 		CommitIndex:  0,
 	}
 
-	response := server.ReceiveAppendEntries(message)
+	response, _ := server.ReceiveAppendEntries(message)
 
 	test.Expect(response.Success).ToBeFalse()
 }
@@ -38,7 +38,7 @@ func TestAppendEntiesFailsWhenLogContainsNothingAtPrevLogIndex(t *testing.T) {
 		CommitIndex:  0,
 	}
 
-	response := server.ReceiveAppendEntries(message)
+	response, _ := server.ReceiveAppendEntries(message)
 
 	test.Expect(response.Success).ToBeFalse()
 }
@@ -58,7 +58,7 @@ func TestAppendEntriesFailsWhenLogDoesNotContainEntryAtPrevLogIndexMatchingPrevL
 		CommitIndex:  0,
 	}
 
-	response := server.ReceiveAppendEntries(message)
+	response, _ := server.ReceiveAppendEntries(message)
 
 	test.Expect(response.Success).ToBeFalse()
 }
@@ -110,7 +110,7 @@ func TestAppendEntriesSucceedsWhenHeartbeatingOnAnEmptyLog(t *testing.T) {
 		CommitIndex:  0,
 	}
 
-	response := server.ReceiveAppendEntries(message)
+	response, _ := server.ReceiveAppendEntries(message)
 
 	test.Expect(response.Success).ToBeTrue()
 }

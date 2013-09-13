@@ -14,8 +14,7 @@ func NewHttpPeer(url string) HttpPeer {
 	return HttpPeer{url}
 }
 
-func (peer HttpPeer) ReceiveAppendEntries(message AppendEntriesMessage) AppendEntriesResponseMessage {
-	var responseMessage AppendEntriesResponseMessage
+func (peer HttpPeer) ReceiveAppendEntries(message AppendEntriesMessage) (responseMessage AppendEntriesResponseMessage, err error) {
 	body, _ := json.Marshal(message)
 	request := telephone.Request{
 		Url:  peer.URL + "/append_entries",
@@ -24,10 +23,11 @@ func (peer HttpPeer) ReceiveAppendEntries(message AppendEntriesMessage) AppendEn
 
 	response := request.Post()
 	if !response.Success {
-		return responseMessage
+		err = errors.New("Could Not Communicate With Remote Peer")
+		return
 	}
 	json.Unmarshal([]byte(response.ParsedBody), &responseMessage)
-	return responseMessage
+	return
 }
 
 func (peer HttpPeer) ReceiveRequestVote(message RequestVoteMessage) (VoteResponseMessage, error) {

@@ -77,7 +77,8 @@ func TestHttpPeerAppendsEntriesOverHttp(t *testing.T) {
 		CommitIndex:  0,
 	}
 
-	response := peer.ReceiveAppendEntries(appendEntriesMessage)
+	response, err := peer.ReceiveAppendEntries(appendEntriesMessage)
 
 	test.Expect(response.Success).ToBeTrue()
+	test.Expect(err == nil).ToBeTrue()
 }

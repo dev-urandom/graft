@@ -5,23 +5,23 @@ import (
 )
 
 type FailingPeer struct {
-	numberOfFails      int
-	successfulResponse VoteResponseMessage
-	failureAppendEntriesResponse AppendEntriesResponseMessage
+	numberOfFails                   int
+	successfulResponse              VoteResponseMessage
+	failureAppendEntriesResponse    AppendEntriesResponseMessage
 	successfulAppendEntriesResponse AppendEntriesResponseMessage
-	Log []LogEntry
+	Log                             []LogEntry
 }
 
-func (peer *FailingPeer) ReceiveAppendEntries(message AppendEntriesMessage) AppendEntriesResponseMessage {
+func (peer *FailingPeer) ReceiveAppendEntries(message AppendEntriesMessage) (AppendEntriesResponseMessage, error) {
 	if peer.shouldFail() {
-		return peer.failureAppendEntriesResponse
+		return peer.failureAppendEntriesResponse, nil
 	}
 
 	for _, entry := range message.Entries {
 		peer.Log = append(peer.Log, entry)
 	}
 
-	return peer.successfulAppendEntriesResponse
+	return peer.successfulAppendEntriesResponse, nil
 }
 
 func (peer *FailingPeer) ReceiveRequestVote(message RequestVoteMessage) (VoteResponseMessage, error) {
