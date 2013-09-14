@@ -38,6 +38,14 @@ func New(id string) *Server {
 	return &Server{FollowerServer{LeaderServer{Voter{CandidateServer{Persister{serverBase}}}}}}
 }
 
+func NewFromConfiguration(config ServerConfiguration) *Server {
+	server := New(config.Id)
+	for _, peerLocation := range config.Peers {
+		server.AddPeers(HttpPeer{peerLocation})
+	}
+	return server
+}
+
 func (server *Server) Start() {
 	server.ElectionTimer.StartTimer()
 }

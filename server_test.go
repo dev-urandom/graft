@@ -51,6 +51,33 @@ func TestNewServerStartsAsFollower(t *testing.T) {
 	test.Expect(server.State).ToEqual(Follower)
 }
 
+func TestNewServerFromConfigurationSetsId(t *testing.T) {
+	test := quiz.Test(t)
+
+	configuration := ServerConfiguration{
+		Id:    "foo",
+		Peers: []string{"localhost:4000", "localhost:3000"},
+	}
+
+	server := NewFromConfiguration(configuration)
+
+	test.Expect(server.Id).ToEqual("foo")
+}
+
+func TestNewServerFromConfigurationsBuildsListOfPeers(t *testing.T) {
+	test := quiz.Test(t)
+
+	configuration := ServerConfiguration{
+		Id:    "foo",
+		Peers: []string{"localhost:4000", "localhost:3000"},
+	}
+
+	server := NewFromConfiguration(configuration)
+
+	test.Expect(len(server.Peers)).ToEqual(2)
+	test.Expect(server.Peers[0].(HttpPeer).URL).ToEqual("localhost:4000")
+}
+
 func TestLastLogTermDerivedFromLogEntries(t *testing.T) {
 	test := quiz.Test(t)
 
