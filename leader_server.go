@@ -70,8 +70,8 @@ func (server *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage
 	return AppendEntriesMessage{
 		Term:         server.Term,
 		LeaderId:     server.Id,
-		PrevLogIndex: server.lastLogIndex(),
+		PrevLogIndex: server.LastLogIndex(),
 		Entries:      entries,
-		CommitIndex:  server.lastCommitIndex(),
+		CommitIndex:  server.LastCommitIndex(),
 	}
 }

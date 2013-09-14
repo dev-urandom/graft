@@ -42,7 +42,7 @@ func (server *Server) Start() {
 	server.ElectionTimer.StartTimer()
 }
 
-func (server *Server) lastCommitIndex() int {
+func (server *Server) LastCommitIndex() int {
 	return server.CommitIndex
 }
 
@@ -59,5 +59,5 @@ func (server *Server) invalidLog(message AppendEntriesMessage) bool {
 }
 
 func (server *Server) logUpToDate(message RequestVoteMessage) bool {
-	return server.lastLogIndex() <= message.LastLogIndex && server.lastLogTerm() <= message.LastLogTerm
+	return server.LastLogIndex() <= message.LastLogIndex && server.lastLogTerm() <= message.LastLogTerm
 }

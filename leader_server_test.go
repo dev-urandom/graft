@@ -56,15 +56,15 @@ func TestAppendEntriesSuccessfully(t *testing.T) {
 	// The leader successfully commits resulting in the commit index to be
 	// incremented by one.
 	test.Expect(len(leader.Log)).ToEqual(1)
-	test.Expect(leader.lastCommitIndex()).ToEqual(1)
+	test.Expect(leader.LastCommitIndex()).ToEqual(1)
 
-	// Because the lastCommitIndex was 0 in the AppendEntriesMessage the
+	// Because the LastCommitIndex was 0 in the AppendEntriesMessage the
 	// followers don't have 1 as a last commit index yet.
 	test.Expect(len(followerA.Log)).ToEqual(1)
-	test.Expect(followerA.lastCommitIndex()).ToEqual(0)
+	test.Expect(followerA.LastCommitIndex()).ToEqual(0)
 
 	test.Expect(len(followerB.Log)).ToEqual(1)
-	test.Expect(followerB.lastCommitIndex()).ToEqual(0)
+	test.Expect(followerB.LastCommitIndex()).ToEqual(0)
 }
 
 func TestAppendEntriesWontCommitWithoutMajority(t *testing.T) {
@@ -93,7 +93,7 @@ func TestAppendEntriesWontCommitWithoutMajority(t *testing.T) {
 
 	leader.AppendEntries("foo")
 
-	test.Expect(leader.lastCommitIndex()).ToEqual(0)
+	test.Expect(leader.LastCommitIndex()).ToEqual(0)
 	test.Expect(len(followerA.Log)).ToEqual(0)
 	test.Expect(len(followerB.Log)).ToEqual(0)
 }
@@ -117,7 +117,7 @@ func TestAppendEntriesCommitsEvenWithSomeFailures(t *testing.T) {
 
 	leader.AppendEntries("foo")
 
-	test.Expect(leader.lastCommitIndex()).ToEqual(1)
+	test.Expect(leader.LastCommitIndex()).ToEqual(1)
 	test.Expect(len(followerA.Log)).ToEqual(1)
 	test.Expect(len(followerB.Log)).ToEqual(1)
 	test.Expect(len(followerC.Log)).ToEqual(0)

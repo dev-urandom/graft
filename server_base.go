@@ -14,7 +14,7 @@ type ServerBase struct {
 	electionFinishedChan chan int
 }
 
-func (server *ServerBase) lastLogIndex() int {
+func (server *ServerBase) LastLogIndex() int {
 	return len(server.Log)
 }
 

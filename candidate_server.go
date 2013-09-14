@@ -11,7 +11,7 @@ func (server *CandidateServer) RequestVote() RequestVoteMessage {
 	return RequestVoteMessage{
 		Term:         server.Term,
 		CandidateId:  server.Id,
-		LastLogIndex: server.lastLogIndex(),
+		LastLogIndex: server.LastLogIndex(),
 		LastLogTerm:  server.lastLogTerm(),
 	}
 }
