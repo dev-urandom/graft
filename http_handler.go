@@ -7,8 +7,8 @@ import (
 	"net/http"
 )
 
-type HttpHandler struct {
-	server *Server
+func HttpHandler(server *Server) http.Handler {
+	return handler(server)
 }
 
 func extractMessage(r *http.Request, message interface{}) error {
@@ -16,7 +16,7 @@ func extractMessage(r *http.Request, message interface{}) error {
 	return json.Unmarshal(body, message)
 }
 
-func (handler HttpHandler) Handler() http.Handler {
+func handler(server *Server) http.Handler {
 	m := pat.New()
 
 	m.Post("/request_vote", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +27,7 @@ func (handler HttpHandler) Handler() http.Handler {
 			return
 		}
 
-		response, _ := handler.server.ReceiveRequestVote(message)
+		response, _ := server.ReceiveRequestVote(message)
 
 		w.WriteHeader(200)
 		json.NewEncoder(w).Encode(response)
@@ -41,7 +41,7 @@ func (handler HttpHandler) Handler() http.Handler {
 			return
 		}
 
-		response, _ := handler.server.ReceiveAppendEntries(message)
+		response, _ := server.ReceiveAppendEntries(message)
 
 		w.WriteHeader(200)
 		json.NewEncoder(w).Encode(response)

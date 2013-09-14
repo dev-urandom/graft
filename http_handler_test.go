@@ -11,9 +11,8 @@ import (
 func TestHttpHandlerWillRespondToRequestVote(t *testing.T) {
 	test := quiz.Test(t)
 	server := New("id")
-	handler := HttpHandler{server}
 
-	listener := httptest.NewServer(handler.Handler())
+	listener := httptest.NewServer(HttpHandler(server))
 	defer listener.Close()
 
 	voteRequestMessage := RequestVoteMessage{
@@ -40,9 +39,8 @@ func TestHttpHandlerWillRespondToRequestVote(t *testing.T) {
 func TestHttpHandlerWillRespondWith422OnBadMessage(t *testing.T) {
 	test := quiz.Test(t)
 	server := New("id")
-	handler := HttpHandler{server}
 
-	listener := httptest.NewServer(handler.Handler())
+	listener := httptest.NewServer(HttpHandler(server))
 	defer listener.Close()
 
 	response := telephone.Post(listener.URL+"/request_vote", "bad_message")
@@ -53,9 +51,8 @@ func TestHttpHandlerWillRespondWith422OnBadMessage(t *testing.T) {
 func TestHttpHandlerWillRespondToAppendEntries(t *testing.T) {
 	test := quiz.Test(t)
 	server := New("id")
-	handler := HttpHandler{server}
 
-	listener := httptest.NewServer(handler.Handler())
+	listener := httptest.NewServer(HttpHandler(server))
 	defer listener.Close()
 
 	message := AppendEntriesMessage{
@@ -83,9 +80,8 @@ func TestHttpHandlerWillRespondToAppendEntries(t *testing.T) {
 func TestHttpHandlerWillRespondToAppendEntriesWithA422OnBadMessage(t *testing.T) {
 	test := quiz.Test(t)
 	server := New("id")
-	handler := HttpHandler{server}
 
-	listener := httptest.NewServer(handler.Handler())
+	listener := httptest.NewServer(HttpHandler(server))
 	defer listener.Close()
 
 	response := telephone.Post(listener.URL+"/append_entries", "bad_message")

@@ -154,11 +154,11 @@ func TestHttpElection(t *testing.T) {
 	serverB := New("B")
 	serverC := New("C")
 
-	listenerA := httptest.NewServer(HttpHandler{serverA}.Handler())
+	listenerA := httptest.NewServer(HttpHandler(serverA))
 	defer listenerA.Close()
-	listenerB := httptest.NewServer(HttpHandler{serverB}.Handler())
+	listenerB := httptest.NewServer(HttpHandler(serverB))
 	defer listenerB.Close()
-	listenerC := httptest.NewServer(HttpHandler{serverC}.Handler())
+	listenerC := httptest.NewServer(HttpHandler(serverC))
 	defer listenerC.Close()
 
 	serverA.AddPeers(HttpPeer{listenerB.URL}, HttpPeer{listenerC.URL})
@@ -185,11 +185,11 @@ func TestCanCommitAcrossA3NodeCluster(t *testing.T) {
 	serverB := New("B")
 	serverC := New("C")
 
-	listenerA := httptest.NewServer(HttpHandler{serverA}.Handler())
+	listenerA := httptest.NewServer(HttpHandler(serverA))
 	defer listenerA.Close()
-	listenerB := httptest.NewServer(HttpHandler{serverB}.Handler())
+	listenerB := httptest.NewServer(HttpHandler(serverB))
 	defer listenerB.Close()
-	listenerC := httptest.NewServer(HttpHandler{serverC}.Handler())
+	listenerC := httptest.NewServer(HttpHandler(serverC))
 	defer listenerC.Close()
 
 	serverA.AddPeers(HttpPeer{listenerB.URL}, HttpPeer{listenerC.URL})
