@@ -8,18 +8,17 @@ import (
 )
 
 func HttpHandler(server *Server) http.Handler {
-	return handler(server)
+	return handler(server, "")
 }
 
-func extractMessage(r *http.Request, message interface{}) error {
-	body, _ := ioutil.ReadAll(r.Body)
-	return json.Unmarshal(body, message)
+func PrefixedHttpHandler(server *Server, prefix string) http.Handler {
+	return handler(server, prefix)
 }
 
-func handler(server *Server) http.Handler {
+func handler(server *Server, prefix string) http.Handler {
 	m := pat.New()
 
-	m.Post("/request_vote", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	m.Post(prefix+"/request_vote", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var message RequestVoteMessage
 		err := extractMessage(r, &message)
 		if err != nil {
@@ -33,7 +32,7 @@ func handler(server *Server) http.Handler {
 		json.NewEncoder(w).Encode(response)
 	}))
 
-	m.Post("/append_entries", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	m.Post(prefix+"/append_entries", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var message AppendEntriesMessage
 		err := extractMessage(r, &message)
 		if err != nil {
@@ -48,4 +47,9 @@ func handler(server *Server) http.Handler {
 	}))
 
 	return m
+}
+
+func extractMessage(r *http.Request, message interface{}) error {
+	body, _ := ioutil.ReadAll(r.Body)
+	return json.Unmarshal(body, message)
 }

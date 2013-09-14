@@ -88,3 +88,15 @@ func TestHttpHandlerWillRespondToAppendEntriesWithA422OnBadMessage(t *testing.T)
 
 	test.Expect(response.StatusCode).ToEqual(422)
 }
+
+func TestHttpHandlerPrefix(t *testing.T) {
+	test := quiz.Test(t)
+	server := New("id")
+
+	listener := httptest.NewServer(PrefixedHttpHandler(server, "/prefix"))
+	defer listener.Close()
+
+	response := telephone.Post(listener.URL+"/prefix/append_entries", "")
+
+	test.Expect(response.StatusCode).ToEqual(422)
+}
