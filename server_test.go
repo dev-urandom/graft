@@ -78,6 +78,20 @@ func TestNewServerFromConfigurationsBuildsListOfPeers(t *testing.T) {
 	test.Expect(server.Peers[0].(HttpPeer).URL).ToEqual("localhost:4000")
 }
 
+func TestNewServerFromConfigurationSetsPersistenceLocation(t *testing.T) {
+	test := quiz.Test(t)
+
+	configuration := ServerConfiguration{
+		Id:                  "foo",
+		Peers:               []string{"localhost:4000", "localhost:3000"},
+		PersistenceLocation: "foo",
+	}
+
+	server := NewFromConfiguration(configuration)
+
+	test.Expect(server.PersistenceLocation).ToEqual("foo")
+}
+
 func TestLastLogTermDerivedFromLogEntries(t *testing.T) {
 	test := quiz.Test(t)
 

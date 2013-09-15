@@ -40,6 +40,7 @@ func New(id string) *Server {
 
 func NewFromConfiguration(config ServerConfiguration) *Server {
 	server := New(config.Id)
+	server.PersistenceLocation = config.PersistenceLocation
 	for _, peerLocation := range config.Peers {
 		server.AddPeers(HttpPeer{peerLocation})
 	}
