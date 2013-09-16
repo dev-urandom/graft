@@ -12,6 +12,7 @@ type ServerBase struct {
 	StateMachine         Commiter
 	CommitIndex          int
 	electionFinishedChan chan int
+	PersistenceLocation  string
 }
 
 func (server *ServerBase) LastLogIndex() int {
