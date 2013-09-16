@@ -38,15 +38,44 @@ func (persister *Persister) stateToPersist() PersistedServerState {
 }
 
 func (persister *Persister) Persist() error {
-	statePath := filepath.Join(persister.PersistenceLocation, "graft-state.json")
-	logPath := filepath.Join(persister.PersistenceLocation, "graft-log.json")
-	err := persister.PersistState(statePath)
+	err := persister.PersistState(persister.statePath())
 	if err != nil {
 		return err
 	}
-	err = persister.PersistLog(logPath)
+	err = persister.PersistLog(persister.logPath())
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (persister *Persister) LoadPersistedState() error {
+	var state PersistedServerState
+	file, err := ioutil.ReadFile(persister.statePath())
+	if err != nil {
+		return err
+	}
+	json.Unmarshal(file, &state)
+	persister.Term = state.CurrentTerm
+	persister.VotedFor = state.VotedFor
+	return nil
+}
+
+func (persister *Persister) LoadPersistedLog() error {
+	var log []LogEntry
+	file, err := ioutil.ReadFile(persister.logPath())
+	if err != nil {
+		return err
+	}
+	json.Unmarshal(file, &log)
+	persister.Log = log
+	return nil
+}
+
+func (persister Persister) statePath() string {
+	return filepath.Join(persister.PersistenceLocation, "graft-state.json")
+}
+
+func (persister Persister) logPath() string {
+	return filepath.Join(persister.PersistenceLocation, "graft-log.json")
 }

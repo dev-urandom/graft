@@ -48,6 +48,8 @@ func NewFromConfiguration(config ServerConfiguration) *Server {
 }
 
 func (server *Server) Start() {
+	server.LoadPersistedState()
+	server.LoadPersistedLog()
 	server.ElectionTimer.StartTimer()
 }
 
