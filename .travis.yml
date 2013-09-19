@@ -4,6 +4,6 @@ go: 1.1
 script:
   - go get
   - go get github.com/benmills/quiz
+  - go get github.com/benmills/examples
   - go get github.com/wjdix/tiktok
-  - go install github.com/benmills/quiz
   - go test -v
