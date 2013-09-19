@@ -71,7 +71,16 @@ func (server *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage
 		Term:         server.Term,
 		LeaderId:     server.Id,
 		PrevLogIndex: server.LastLogIndex(),
+		PrevLogTerm:  server.prevLogTerm(),
 		Entries:      entries,
 		CommitIndex:  server.LastCommitIndex(),
+	}
+}
+
+func (server *Server) prevLogTerm() int {
+	if server.LastLogIndex() > len(server.Log) || server.LastLogIndex() == 0 {
+		return 0
+	} else {
+		return server.Log[server.LastLogIndex()-1].Term
 	}
 }
