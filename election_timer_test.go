@@ -1,7 +1,7 @@
 package graft
 
 import (
-	"github.com/benmills/quiz"
+	e "github.com/lionelbarrow/examples"
 	"github.com/wjdix/tiktok"
 	"testing"
 	"time"
@@ -21,63 +21,63 @@ func (server *SpyServer) StartElection() {
 	server.electionCount += 1
 }
 
-func TestTimerTellsServerToStartElectionWhenReceivingOnTimeoutChannel(t *testing.T) {
-	test := quiz.Test(t)
+func TestElectionTimer(t *testing.T) {
+	e.Describe("NewElectionTimer", t,
+		e.It("tells the server to start the election on <-ElectionChannel", func(expect e.Expectation) {
+			spyServer := &SpyServer{electionStarted: false, electionCount: 0}
+			timer := NewElectionTimer(1, spyServer)
+			defer timer.ShutDown()
 
-	spyServer := &SpyServer{electionStarted: false, electionCount: 0}
-	timer := NewElectionTimer(1, spyServer)
-	timer.ElectionChannel <- 1
-	test.Expect(spyServer.electionStarted).ToBeTrue()
-	timer.ShutDown()
-}
+			timer.ElectionChannel <- 1
 
-func TestTimer(t *testing.T) {
-	test := quiz.Test(t)
+			expect(spyServer.electionStarted).ToBeTrue()
+		}),
+	)
 
-	spyServer := &SpyServer{electionStarted: false, electionCount: 0}
-	timer := NewElectionTimer(1, spyServer)
-	timer.tickerBuilder = FakeTicker
-	defer tiktok.ClearTickers()
+	e.Describe("StartTimer", t,
+		e.It("can start an election", func(expect e.Expectation) {
+			spyServer := &SpyServer{electionStarted: false, electionCount: 0}
+			timer := NewElectionTimer(1, spyServer)
+			timer.tickerBuilder = FakeTicker
+			defer tiktok.ClearTickers()
 
-	timer.StartTimer()
+			timer.StartTimer()
 
-	tiktok.Tick(1)
+			tiktok.Tick(1)
 
-	timer.ShutDown()
-	test.Expect(spyServer.electionStarted).ToBeTrue()
-}
+			timer.ShutDown()
+			expect(spyServer.electionStarted).ToBeTrue()
+		}),
 
-func TestTimerStartsMultipleElections(t *testing.T) {
-	test := quiz.Test(t)
+		e.It("can start multiple elections", func(expect e.Expectation) {
+			spyServer := &SpyServer{electionStarted: false, electionCount: 0}
+			timer := NewElectionTimer(2, spyServer)
+			timer.tickerBuilder = FakeTicker
+			defer tiktok.ClearTickers()
 
-	spyServer := &SpyServer{electionStarted: false, electionCount: 0}
-	timer := NewElectionTimer(2, spyServer)
-	timer.tickerBuilder = FakeTicker
-	defer tiktok.ClearTickers()
+			timer.StartTimer()
 
-	timer.StartTimer()
+			tiktok.Tick(10)
 
-	tiktok.Tick(10)
+			timer.ShutDown()
 
-	timer.ShutDown()
+			expect(spyServer.electionCount).ToBeGreaterThan(1)
+		}),
 
-	test.Expect(spyServer.electionCount).ToBeGreaterThan(1)
-}
+		e.It("does not start an election on reset", func(expect e.Expectation) {
+			spyServer := &SpyServer{electionStarted: false, electionCount: 0}
+			timer := NewElectionTimer(5, spyServer)
+			timer.tickerBuilder = FakeTicker
+			defer tiktok.ClearTickers()
 
-func TestResetTimerDoesNotTick(t *testing.T) {
-	test := quiz.Test(t)
+			timer.StartTimer()
 
-	spyServer := &SpyServer{electionStarted: false, electionCount: 0}
-	timer := NewElectionTimer(5, spyServer)
-	timer.tickerBuilder = FakeTicker
-	defer tiktok.ClearTickers()
+			tiktok.Tick(3)
+			timer.Reset()
 
-	timer.StartTimer()
-
-	tiktok.Tick(3)
-	timer.Reset()
-
-	tiktok.Tick(2)
-	timer.ShutDown()
-	test.Expect(spyServer.electionCount).ToEqual(0)
+			tiktok.Tick(2)
+			timer.ShutDown()
+			expect(spyServer.electionCount).ToEqual(0)
+		}),
+	)
 }
