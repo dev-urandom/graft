@@ -117,9 +117,9 @@ func TestFollowerServer(t *testing.T) {
 				Term:         1,
 				LeaderId:     "leader_id",
 				PrevLogIndex: 0,
-				Entries:      []LogEntry{LogEntry{Term: 1, Data: "foo"}},
+				Entries:      []LogEntry{LogEntry{Term: 1, Data: "foo"}, LogEntry{Term: 1, Data: "Bar"}},
 				PrevLogTerm:  1,
-				CommitIndex:  1,
+				CommitIndex:  2,
 			}
 
 			go func(messageChan chan string, shutDownChan chan int) {
@@ -130,6 +130,7 @@ func TestFollowerServer(t *testing.T) {
 						messages = append(messages, message)
 					case <-shutdownChan:
 						expect(messages[0]).ToEqual("foo")
+						expect(messages[1]).ToEqual("Bar")
 						return
 					}
 				}

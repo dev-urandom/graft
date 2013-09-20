@@ -43,6 +43,20 @@ func TestGenerateAppendEntriesMessageWithMultipleEntries(t *testing.T) {
 	test.Expect(message.Entries[1].Data).ToEqual("bar")
 }
 
+func TestGenerateAppendEntriesIncludesLastLogTerm(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New("id")
+	server.Log = []LogEntry{LogEntry{Term: 1, Data: "baz"}}
+
+	message := server.GenerateAppendEntries("foo", "bar")
+
+	test.Expect(len(message.Entries)).ToEqual(2)
+	test.Expect(message.Entries[0].Data).ToEqual("foo")
+	test.Expect(message.Entries[1].Data).ToEqual("bar")
+	test.Expect(message.PrevLogTerm).ToEqual(1)
+}
+
 func TestAppendEntriesSuccessfully(t *testing.T) {
 	test := quiz.Test(t)
 
