@@ -18,7 +18,10 @@ func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) (Append
 
 	server.ElectionTimer.Reset()
 	server.updateLog(message.PrevLogIndex, message.Entries)
-	server.commitTo(message.CommitIndex)
+
+	if message.CommitIndex > 0 {
+		server.commitTo(message.CommitIndex)
+	}
 
 	return AppendEntriesResponseMessage{
 		Success: true,
@@ -26,9 +29,9 @@ func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) (Append
 }
 
 func (server *Server) commitTo(i int) {
-	if server.CommitIndex == 0 && i > 0 {
-		server.StateMachine.Commit(server.Log[0].Data)
-		server.CommitIndex = 1
+	for i >= server.CommitIndex {
+		server.StateMachine.Commit(server.Log[i-1].Data)
+		server.CommitIndex++
 	}
 }
 
