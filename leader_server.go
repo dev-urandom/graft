@@ -1,5 +1,8 @@
 package graft
 
+import "fmt"
+import "sync"
+
 type LeaderServer struct {
 	Voter
 }
@@ -11,12 +14,13 @@ const (
 func (server *Server) AppendEntries(data ...string) {
 	message := server.GenerateAppendEntries(data...)
 	successfulAppends := 1
-	appendResponseChan := make(chan AppendEntriesResponseMessage)
+	appendResponseChan := make(chan AppendEntriesResponseMessage, 1)
 	finishedChan := make(chan bool)
-	failedPeerChan := make(chan int)
+	failedPeerChan := make(chan int, 1)
 	go func(peercount int) {
 		received := 0
 		for received < peercount {
+			fmt.Println("still running")
 			select {
 			case <-failedPeerChan:
 				received++
@@ -34,24 +38,31 @@ func (server *Server) AppendEntries(data ...string) {
 		finishedChan <- false
 		return
 	}(len(server.Peers))
-
-	for _, peer := range server.Peers {
-		go func(maxFailures int, target Peer) {
+	waitGroup := sync.WaitGroup{}
+	for i, peer := range server.Peers {
+		go func(maxFailures int, target Peer, peerNum int) {
+			waitGroup.Add(1)
 			failureCount := 0
 			for failureCount < maxFailures {
 				response, err := target.ReceiveAppendEntries(message)
 				if err != nil {
+					fmt.Println("this guy failed: ", peerNum+1)
 					failureCount++
+					fmt.Println("failurecount: ", failureCount)
 				} else {
+					fmt.Println("this guy succeeded: ", peerNum+1)
 					appendResponseChan <- response
+					waitGroup.Done()
 					return
 				}
 			}
+			fmt.Println("sending to failed peer")
 			failedPeerChan <- 0
+			fmt.Println("failed peer")
+			waitGroup.Done()
 			return
-		}(5, peer)
+		}(1, peer, i)
 	}
-
 	select {
 	case success := <-finishedChan:
 		if success {
@@ -59,6 +70,8 @@ func (server *Server) AppendEntries(data ...string) {
 			server.CommitIndex++
 		}
 	}
+	fmt.Println("Waiting")
+	waitGroup.Wait()
 }
 
 func (server *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage {
