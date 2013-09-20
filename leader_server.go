@@ -4,56 +4,18 @@ type LeaderServer struct {
 	Voter
 }
 
-const (
-	appendEntriesMaxRetries = 0
-)
-
 func (server *Server) AppendEntries(data ...string) {
 	message := server.GenerateAppendEntries(data...)
-	successfulAppends := 1
 	appendResponseChan := make(chan AppendEntriesResponseMessage)
-	finishedChan := make(chan bool)
-	failedPeerChan := make(chan int)
-	go func(peercount int) {
-		received := 0
-		for received < peercount {
-			select {
-			case <-failedPeerChan:
-				received++
-			case response := <-appendResponseChan:
-				received++
-				if response.Success {
-					successfulAppends++
-				}
-				if successfulAppends > (peercount / 2) {
-					finishedChan <- true
-					return
-				}
-			}
-		}
-		finishedChan <- false
-		return
-	}(len(server.Peers))
+	finishedChannel := make(chan bool)
+	peerFailureChannel := make(chan int)
 
-	for _, peer := range server.Peers {
-		go func(maxFailures int, target Peer) {
-			failureCount := 0
-			for failureCount < maxFailures {
-				response, err := target.ReceiveAppendEntries(message)
-				if err != nil {
-					failureCount++
-				} else {
-					appendResponseChan <- response
-					return
-				}
-			}
-			failedPeerChan <- 0
-			return
-		}(5, peer)
-	}
+	go server.listenForPeerResponses(appendResponseChan, peerFailureChannel, finishedChannel)
+
+	server.broadcastToPeers(message, appendResponseChan, peerFailureChannel)
 
 	select {
-	case success := <-finishedChan:
+	case success := <-finishedChannel:
 		if success {
 			server.updateLog(message.PrevLogIndex, message.Entries)
 			server.CommitIndex++
@@ -83,4 +45,48 @@ func (server *Server) prevLogTerm() int {
 	} else {
 		return server.Log[server.LastLogIndex()-1].Term
 	}
+}
+
+func (server *Server) broadcastToPeers(message AppendEntriesMessage,
+	responseChannel chan AppendEntriesResponseMessage, peerFailureChannel chan int) {
+	for _, peer := range server.Peers {
+		go func(maxFailures int, target Peer) {
+			failureCount := 0
+			for failureCount < maxFailures {
+				response, err := target.ReceiveAppendEntries(message)
+				if err != nil {
+					failureCount++
+				} else {
+					responseChannel <- response
+					return
+				}
+			}
+			peerFailureChannel <- 0
+			return
+		}(5, peer)
+	}
+}
+
+func (server *Server) listenForPeerResponses(responseChannel chan AppendEntriesResponseMessage,
+	peerFailureChannel chan int, finishedChannel chan bool) {
+	peerCount := len(server.Peers)
+	received := 0
+	successfulAppends := 1
+	for received < peerCount {
+		select {
+		case <-peerFailureChannel:
+			received++
+		case response := <-responseChannel:
+			received++
+			if response.Success {
+				successfulAppends++
+			}
+			if successfulAppends > (peerCount / 2) {
+				finishedChannel <- true
+				return
+			}
+		}
+	}
+	finishedChannel <- false
+	return
 }
