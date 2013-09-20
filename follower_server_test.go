@@ -1,7 +1,7 @@
 package graft
 
 import (
-	e "github.com/lionelbarrow/examples"
+	e "github.com/benmills/examples"
 	"testing"
 )
 

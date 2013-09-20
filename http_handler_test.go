@@ -2,8 +2,8 @@ package graft
 
 import (
 	"encoding/json"
+	e "github.com/benmills/examples"
 	"github.com/benmills/telephone"
-	e "github.com/lionelbarrow/examples"
 	"net/http/httptest"
 	"testing"
 )
