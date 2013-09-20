@@ -1,5 +1,7 @@
 package graft
 
+import "fmt"
+
 type LeaderServer struct {
 	Voter
 }
@@ -21,6 +23,7 @@ func (server *Server) AppendEntries(data ...string) {
 			server.CommitIndex++
 		}
 	}
+	fmt.Println("Waiting")
 }
 
 func (server *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage {

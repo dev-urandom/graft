@@ -1,10 +1,63 @@
 package graft
 
 import (
+	e "github.com/benmills/examples"
 	"github.com/benmills/quiz"
 	"github.com/wjdix/tiktok"
 	"testing"
 )
+
+func NewPeerWithControlledTimeout(id string, timeoutLength time.Duration) (ChannelPeer, *ElectionTimer) {
+	server := New(id)
+	throwAway := make(chan string, 10)
+	server.StateMachine = SpyStateMachine{throwAway}
+	timer := NewElectionTimer(timeoutLength, server)
+	timer.tickerBuilder = FakeTicker
+	return NewChannelPeer(server), timer
+}
+
+func TestIntegration(t *testing.T) {
+	e.Describe("log", t,
+		e.It("will continue to pull from leaders log back in time until followers are up to date", func(expect e.Expectation) {
+			leader, _ := NewPeerWithControlledTimeout("server1", 0)
+			follower2, _ := NewPeerWithControlledTimeout("server2", 0)
+			follower3, _ := NewPeerWithControlledTimeout("server3", 0)
+			leader.server.Peers = []Peer{follower2, follower3}
+			follower2.server.Peers = []Peer{leader, follower3}
+			follower3.server.Peers = []Peer{leader, follower2}
+			leader.Start()
+			follower2.Start()
+			follower3.Start()
+			defer leader.ShutDown()
+			defer follower2.ShutDown()
+			defer follower3.ShutDown()
+			leader.server.StartElection()
+
+			follower3.Partition()
+
+			leader.server.AppendEntries("A")
+			leader.server.AppendEntries("B")
+
+			expect(follower3.server.CommitIndex).To.Equal(0)
+
+			follower3.HealPartition()
+			follower2.Partition()
+
+			t.Log(follower3.server.Log)
+
+			expect(follower3.server.CommitIndex).To.Equal(0)
+
+			leader.server.AppendEntries("C")
+
+			time.Sleep(10 * time.Second)
+
+			expect(leader.server.CommitIndex).To.Equal(3)
+			expect(follower3.server.CommitIndex).To.Equal(2)
+			expect(len(follower3.server.Log)).To.Equal(3)
+			t.Log(follower3.server.Log)
+		}),
+	)
+}
 
 func TestA3NodeClusterElectsTheFirstNodeToCallForElection(t *testing.T) {
 	test := quiz.Test(t)

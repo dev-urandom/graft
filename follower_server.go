@@ -29,8 +29,8 @@ func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) (Append
 }
 
 func (server *Server) commitTo(i int) {
-	for i >= server.CommitIndex {
-		server.StateMachine.Commit(server.Log[i-1].Data)
+	for i > server.CommitIndex {
+		server.StateMachine.Commit(server.Log[server.CommitIndex].Data)
 		server.CommitIndex++
 	}
 }
@@ -38,8 +38,13 @@ func (server *Server) commitTo(i int) {
 func (server *Server) updateLog(prevLogIndex int, entries []LogEntry) {
 	if len(server.Log) == 0 {
 		server.Log = entries
-	}
-	for i, entry := range entries {
-		server.Log[i+prevLogIndex] = entry
+	} else {
+		for i, entry := range entries {
+			if i+prevLogIndex >= len(server.Log) {
+				server.Log = append(server.Log, entry)
+			} else {
+				server.Log[i+prevLogIndex] = entry
+			}
+		}
 	}
 }
