@@ -3,227 +3,111 @@ package graft
 import (
 	"github.com/benmills/quiz"
 	"github.com/wjdix/tiktok"
-	"net/http/httptest"
 	"testing"
-	"time"
 )
-
-func NewPeerWithControlledTimeout(id string, timeoutLength time.Duration) (ChannelPeer, *ElectionTimer) {
-	server := New(id)
-	timer := NewElectionTimer(timeoutLength, server)
-	timer.tickerBuilder = FakeTicker
-	return NewChannelPeer(server), timer
-}
 
 func TestA3NodeClusterElectsTheFirstNodeToCallForElection(t *testing.T) {
 	test := quiz.Test(t)
-	peer1, timer1 := NewPeerWithControlledTimeout("server1", 2)
-	peer2, timer2 := NewPeerWithControlledTimeout("server2", 9)
-	peer3, timer3 := NewPeerWithControlledTimeout("server3", 9)
-	peer1.server.Peers = []Peer{peer2, peer3}
-	peer2.server.Peers = []Peer{peer1, peer3}
-	peer3.server.Peers = []Peer{peer1, peer2}
-	peer1.Start()
-	timer1.StartTimer()
-	peer2.Start()
-	timer2.StartTimer()
-	peer3.Start()
-	timer3.StartTimer()
+	c := newCluster(3).withChannelPeers().withTimeouts(2, 9, 9)
+	c.startChannelPeers()
+	c.startElectionTimers()
+
 	tiktok.Tick(3)
 
-	timer1.ShutDown()
-	timer2.ShutDown()
-	timer3.ShutDown()
-	peer1.ShutDown()
-	peer2.ShutDown()
-	peer3.ShutDown()
-	tiktok.ClearTickers()
+	c.shutdown()
 
-	test.Expect(peer1.server.State).ToEqual(Leader)
+	test.Expect(c.server(1).State).ToEqual(Leader)
 }
 
 func TestStartElectionIsLiveWith2FailingNodes(t *testing.T) {
 	test := quiz.Test(t)
-	peer1, _ := NewPeerWithControlledTimeout("server1", 2)
-	peer2, _ := NewPeerWithControlledTimeout("server2", 9)
-	peer3, _ := NewPeerWithControlledTimeout("server3", 9)
-	peer1.server.Peers = []Peer{peer2, peer3}
-	peer2.server.Peers = []Peer{peer1, peer3}
-	peer3.server.Peers = []Peer{peer1, peer2}
-	peer1.Start()
-	peer2.Start()
-	peer2.Partition()
-	peer3.Start()
-	peer3.Partition()
+	c := newCluster(3).withChannelPeers().withTimeouts(2, 9, 9)
+	c.startChannelPeers()
+	c.startElectionTimers()
+	c.partition(2, 3)
 
-	peer1.server.StartElection()
+	c.server(1).StartElection()
 
-	peer1.ShutDown()
-	peer2.ShutDown()
-	peer3.ShutDown()
+	c.shutdown()
 
-	test.Expect(peer1.server.State).ToEqual(Follower)
+	test.Expect(c.server(1).State).To.Equal(Follower)
 }
 
 func TestA5NodeClusterCanElectLeaderIf2NodesPartitioned(t *testing.T) {
 	test := quiz.Test(t)
-	peer1, timer1 := NewPeerWithControlledTimeout("server1", 2)
-	peer2, timer2 := NewPeerWithControlledTimeout("server2", 9)
-	peer3, timer3 := NewPeerWithControlledTimeout("server3", 9)
-	peer4, timer4 := NewPeerWithControlledTimeout("server4", 9)
-	peer5, timer5 := NewPeerWithControlledTimeout("server5", 9)
-	peer1.server.Peers = []Peer{peer2, peer3, peer4, peer5}
-	peer1.Start()
-	timer1.StartTimer()
-	peer2.Start()
-	timer2.StartTimer()
-	peer3.Start()
-	timer3.StartTimer()
-	peer4.Start()
-	peer4.Partition()
-	timer4.StartTimer()
-	peer5.Start()
-	peer5.Partition()
-	timer5.StartTimer()
+	c := newCluster(5).withChannelPeers().withTimeouts(2, 9, 9, 9, 9)
+	c.startChannelPeers()
+	c.partition(4, 5)
+	c.startElectionTimers()
 
 	tiktok.Tick(3)
 
-	timer1.ShutDown()
-	timer2.ShutDown()
-	timer3.ShutDown()
-	timer4.ShutDown()
-	timer5.ShutDown()
-	peer1.ShutDown()
-	peer2.ShutDown()
-	peer3.ShutDown()
-	peer4.ShutDown()
-	peer5.ShutDown()
-	tiktok.ClearTickers()
+	c.shutdown()
 
-	test.Expect(peer1.server.State).ToEqual(Leader)
+	test.Expect(c.server(1).State).ToEqual(Leader)
 }
 
 func TestA5NodeClusterWillEndAnElectionEarlyUnderAPartitionDueToHigherTerm(t *testing.T) {
 	test := quiz.Test(t)
-	peer1, timer1 := NewPeerWithControlledTimeout("server1", 2)
-	peer2, timer2 := NewPeerWithControlledTimeout("server2", 9)
-	peer3, timer3 := NewPeerWithControlledTimeout("server3", 9)
-	peer4, timer4 := NewPeerWithControlledTimeout("server4", 9)
-	peer5, timer5 := NewPeerWithControlledTimeout("server5", 9)
-	peer1.server.Peers = []Peer{peer2, peer3, peer4, peer5}
+	c := newCluster(5).withChannelPeers().withTimeouts(2, 9, 9, 9, 9)
 
-	// peer3 lead before 4 and 5 were partitioned
-	peer3.server.Term = 2
-	peer4.server.Term = 2
-	peer5.server.Term = 2
+	// server 3 lead before 4 and 5 were partitioned
+	c.server(3).Term = 2
+	c.server(4).Term = 2
+	c.server(5).Term = 2
 
-	peer1.Start()
-	timer1.StartTimer()
-	peer2.Start()
-	timer2.StartTimer()
-	peer3.Start()
-	timer3.StartTimer()
-	peer4.Start()
-	peer4.Partition()
-	timer4.StartTimer()
-	peer5.Start()
-	peer5.Partition()
-	timer5.StartTimer()
+	c.startChannelPeers()
+	c.partition(4, 5)
+	c.startElectionTimers()
+
 	tiktok.Tick(3)
 
-	timer1.ShutDown()
-	timer2.ShutDown()
-	timer3.ShutDown()
-	timer4.ShutDown()
-	timer5.ShutDown()
-	peer1.ShutDown()
-	peer2.ShutDown()
-	peer3.ShutDown()
-	peer4.ShutDown()
-	peer5.ShutDown()
-	tiktok.ClearTickers()
+	c.shutdown()
 
-	test.Expect(peer1.server.State).ToEqual(Follower)
-	test.Expect(peer1.server.Term).ToEqual(2)
+	test.Expect(c.server(1).State).ToEqual(Follower)
+	test.Expect(c.server(1).Term).ToEqual(2)
 }
 
 func TestHttpElection(t *testing.T) {
 	test := quiz.Test(t)
+	c := newCluster(3).withHttpPeers()
+	defer c.closeHttpServers()
 
-	serverA := New("A")
-	serverB := New("B")
-	serverC := New("C")
+	c.server(1).StartElection()
 
-	listenerA := httptest.NewServer(HttpHandler(serverA))
-	defer listenerA.Close()
-	listenerB := httptest.NewServer(HttpHandler(serverB))
-	defer listenerB.Close()
-	listenerC := httptest.NewServer(HttpHandler(serverC))
-	defer listenerC.Close()
+	test.Expect(c.server(1).State).ToEqual(Leader)
+	test.Expect(c.server(1).VotedFor).ToEqual("server1")
+	test.Expect(c.server(1).Term).ToEqual(1)
 
-	serverA.AddPeers(HttpPeer{listenerB.URL}, HttpPeer{listenerC.URL})
-	serverB.AddPeers(HttpPeer{listenerA.URL}, HttpPeer{listenerC.URL})
-	serverC.AddPeers(HttpPeer{listenerA.URL}, HttpPeer{listenerB.URL})
+	test.Expect(c.server(2).VotedFor).ToEqual("server1")
+	test.Expect(c.server(2).Term).ToEqual(1)
 
-	serverA.StartElection()
-
-	test.Expect(serverA.State).ToEqual(Leader)
-	test.Expect(serverA.VotedFor).ToEqual("A")
-	test.Expect(serverA.Term).ToEqual(1)
-
-	test.Expect(serverB.VotedFor).ToEqual("A")
-	test.Expect(serverB.Term).ToEqual(1)
-
-	test.Expect(serverC.VotedFor).ToEqual("A")
-	test.Expect(serverC.Term).ToEqual(1)
+	test.Expect(c.server(3).VotedFor).ToEqual("server1")
+	test.Expect(c.server(3).Term).ToEqual(1)
 }
 
-func TestCanCommitAcrossA3NodeCluster(t *testing.T) {
+func TestCanCommitAcrossA3NodeHttpCluster(t *testing.T) {
 	test := quiz.Test(t)
+	c := newCluster(3).withHttpPeers()
+	defer c.closeHttpServers()
+	c.electLeader(1)
 
-	serverA := New("A")
-	serverB := New("B")
-	serverC := New("C")
+	c.server(1).AppendEntries("foo")
 
-	listenerA := httptest.NewServer(HttpHandler(serverA))
-	defer listenerA.Close()
-	listenerB := httptest.NewServer(HttpHandler(serverB))
-	defer listenerB.Close()
-	listenerC := httptest.NewServer(HttpHandler(serverC))
-	defer listenerC.Close()
-
-	serverA.AddPeers(HttpPeer{listenerB.URL}, HttpPeer{listenerC.URL})
-	serverB.AddPeers(HttpPeer{listenerA.URL}, HttpPeer{listenerC.URL})
-	serverC.AddPeers(HttpPeer{listenerA.URL}, HttpPeer{listenerB.URL})
-
-	serverA.StartElection()
-
-	serverA.AppendEntries("foo")
-
-	test.Expect(serverA.CommitIndex).ToEqual(1)
+	test.Expect(c.server(1).CommitIndex).ToEqual(1)
 }
 
 func TestCannotCommitAcrossA3NodeClusterIfTwoNodesArePartitioned(t *testing.T) {
 	test := quiz.Test(t)
-	peer1, _ := NewPeerWithControlledTimeout("server1", 2)
-	peer2, _ := NewPeerWithControlledTimeout("server2", 9)
-	peer3, _ := NewPeerWithControlledTimeout("server3", 9)
-	peer1.server.Peers = []Peer{peer2, peer3}
-	peer2.server.Peers = []Peer{peer1, peer3}
-	peer3.server.Peers = []Peer{peer1, peer2}
-	peer1.Start()
-	peer2.Start()
-	peer3.Start()
+	c := newCluster(3).withChannelPeers().withTimeouts(2, 9, 9)
+	c.startChannelPeers()
+	c.electLeader(1)
 
-	peer1.server.StartElection()
+	c.partition(2, 3)
 
-	peer2.Partition()
-	peer3.Partition()
+	c.server(1).AppendEntries("foo")
 
-	peer1.server.AppendEntries("foo")
-	peer1.ShutDown()
-	peer2.ShutDown()
-	peer3.ShutDown()
+	c.shutdown()
 
-	test.Expect(peer1.server.CommitIndex).ToEqual(0)
+	test.Expect(c.server(1).CommitIndex).ToEqual(0)
 }
