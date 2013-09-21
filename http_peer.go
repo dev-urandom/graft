@@ -11,7 +11,7 @@ type HttpPeer struct {
 }
 
 func NewHttpPeer(url string) HttpPeer {
-	return HttpPeer{url}
+	return HttpPeer{URL: url}
 }
 
 func (peer HttpPeer) ReceiveAppendEntries(message AppendEntriesMessage) (responseMessage AppendEntriesResponseMessage, err error) {
