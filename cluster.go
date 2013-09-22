@@ -18,6 +18,8 @@ type cluster struct {
 	httpServers    []*httptest.Server
 }
 
+type CommiterBuilder func() Commiter
+
 func newCluster(size int) *cluster {
 	c := &cluster{}
 
@@ -51,6 +53,14 @@ func (c *cluster) withHttpPeers() *cluster {
 	return c
 }
 
+func (c *cluster) withStateMachine(machineBuilder CommiterBuilder) *cluster {
+	for _, s := range c.servers {
+		s.StateMachine = machineBuilder()
+	}
+
+	return c
+}
+
 func (c *cluster) addPeers() {
 	for si, s := range c.servers {
 		for pi, p := range c.peers {
@@ -64,6 +74,12 @@ func (c *cluster) addPeers() {
 func (c *cluster) partition(peerIds ...int) {
 	for _, peerId := range peerIds {
 		c.peer(peerId).(ChannelPeer).Partition()
+	}
+}
+
+func (c *cluster) healPartition(peerIds ...int) {
+	for _, peerId := range peerIds {
+		c.peer(peerId).(ChannelPeer).HealPartition()
 	}
 }
 
