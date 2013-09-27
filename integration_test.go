@@ -7,54 +7,36 @@ import (
 	"testing"
 )
 
-func NewPeerWithControlledTimeout(id string, timeoutLength time.Duration) (ChannelPeer, *ElectionTimer) {
-	server := New(id)
+func buildThrowAwayStateMachine() Commiter {
 	throwAway := make(chan string, 10)
-	server.StateMachine = SpyStateMachine{throwAway}
-	timer := NewElectionTimer(timeoutLength, server)
-	timer.tickerBuilder = FakeTicker
-	return NewChannelPeer(server), timer
+	return SpyStateMachine{throwAway}
 }
 
 func TestIntegration(t *testing.T) {
 	e.Describe("log", t,
 		e.It("will continue to pull from leaders log back in time until followers are up to date", func(expect e.Expectation) {
-			leader, _ := NewPeerWithControlledTimeout("server1", 0)
-			follower2, _ := NewPeerWithControlledTimeout("server2", 0)
-			follower3, _ := NewPeerWithControlledTimeout("server3", 0)
-			leader.server.Peers = []Peer{follower2, follower3}
-			follower2.server.Peers = []Peer{leader, follower3}
-			follower3.server.Peers = []Peer{leader, follower2}
-			leader.Start()
-			follower2.Start()
-			follower3.Start()
-			defer leader.ShutDown()
-			defer follower2.ShutDown()
-			defer follower3.ShutDown()
-			leader.server.StartElection()
+			c := newCluster(3).withChannelPeers().withStateMachine(buildThrowAwayStateMachine).withTimeouts(2, 9, 9)
+			c.startChannelPeers()
+			c.startElectionTimers()
 
-			follower3.Partition()
+			c.server(1).StartElection()
+			c.partition(3)
 
-			leader.server.AppendEntries("A")
-			leader.server.AppendEntries("B")
+			c.server(1).AppendEntries("A")
+			c.server(1).AppendEntries("B")
 
-			expect(follower3.server.CommitIndex).To.Equal(0)
+			expect(c.server(3).CommitIndex).To.Equal(0)
 
-			follower3.HealPartition()
-			follower2.Partition()
+			c.healPartition(3)
+			c.partition(2)
 
-			t.Log(follower3.server.Log)
+			expect(c.server(3).CommitIndex).To.Equal(0)
 
-			expect(follower3.server.CommitIndex).To.Equal(0)
+			c.server(1).AppendEntries("C")
 
-			leader.server.AppendEntries("C")
-
-			time.Sleep(10 * time.Second)
-
-			expect(leader.server.CommitIndex).To.Equal(3)
-			expect(follower3.server.CommitIndex).To.Equal(2)
-			expect(len(follower3.server.Log)).To.Equal(3)
-			t.Log(follower3.server.Log)
+			expect(c.server(1).CommitIndex).To.Equal(3)
+			expect(c.server(3).CommitIndex).To.Equal(2)
+			expect(len(c.server(3).Log)).To.Equal(3)
 		}),
 	)
 }
