@@ -53,10 +53,6 @@ func (server *Server) Start() {
 	server.ElectionTimer.StartTimer()
 }
 
-func (server *Server) LastCommitIndex() int {
-	return server.CommitIndex
-}
-
 func (server *Server) stepDown() {
 	server.State = Follower
 }

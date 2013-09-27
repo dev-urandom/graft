@@ -57,6 +57,27 @@ func TestGenerateAppendEntriesIncludesLastLogTerm(t *testing.T) {
 	test.Expect(message.PrevLogTerm).ToEqual(1)
 }
 
+func TestRollBackAppendEntriesMessage(t *testing.T) {
+	test := quiz.Test(t)
+
+	server := New("id")
+	server.Log = []LogEntry{LogEntry{Term: 1, Data: "baz"}, LogEntry{Term: 2, Data: "bar"}}
+
+	m := AppendEntriesMessage{
+		Term:         2,
+		LeaderId:     "id",
+		PrevLogIndex: 1,
+		PrevLogTerm:  1,
+		Entries:      []LogEntry{LogEntry{Term: 2, Data: "bar"}},
+		CommitIndex:  0,
+	}
+
+	m2 := server.rolledBackMessage(m)
+
+	test.Expect(m2.PrevLogIndex).ToEqual(0)
+	test.Expect(m2.PrevLogTerm).ToEqual(0)
+}
+
 func TestAppendEntriesSuccessfully(t *testing.T) {
 	test := quiz.Test(t)
 
@@ -70,15 +91,15 @@ func TestAppendEntriesSuccessfully(t *testing.T) {
 	// The leader successfully commits resulting in the commit index to be
 	// incremented by one.
 	test.Expect(len(leader.Log)).ToEqual(1)
-	test.Expect(leader.LastCommitIndex()).ToEqual(1)
+	test.Expect(leader.CommitIndex).ToEqual(1)
 
 	// Because the LastCommitIndex was 0 in the AppendEntriesMessage the
 	// followers don't have 1 as a last commit index yet.
 	test.Expect(len(followerA.Log)).ToEqual(1)
-	test.Expect(followerA.LastCommitIndex()).ToEqual(0)
+	test.Expect(followerA.CommitIndex).ToEqual(0)
 
 	test.Expect(len(followerB.Log)).ToEqual(1)
-	test.Expect(followerB.LastCommitIndex()).ToEqual(0)
+	test.Expect(followerB.CommitIndex).ToEqual(0)
 }
 
 func TestAppendEntriesWontCommitWithoutMajority(t *testing.T) {
@@ -107,7 +128,7 @@ func TestAppendEntriesWontCommitWithoutMajority(t *testing.T) {
 
 	leader.AppendEntries("foo")
 
-	test.Expect(leader.LastCommitIndex()).ToEqual(0)
+	test.Expect(leader.CommitIndex).ToEqual(0)
 	test.Expect(len(followerA.Log)).ToEqual(0)
 	test.Expect(len(followerB.Log)).ToEqual(0)
 }
@@ -131,7 +152,7 @@ func TestAppendEntriesCommitsEvenWithSomeFailures(t *testing.T) {
 
 	leader.AppendEntries("foo")
 
-	test.Expect(leader.LastCommitIndex()).ToEqual(1)
+	test.Expect(leader.CommitIndex).ToEqual(1)
 	test.Expect(len(followerA.Log)).ToEqual(1)
 	test.Expect(len(followerB.Log)).ToEqual(1)
 	test.Expect(len(followerC.Log)).ToEqual(0)
