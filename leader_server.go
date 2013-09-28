@@ -1,5 +1,7 @@
 package graft
 
+import "fmt"
+
 type LeaderServer struct {
 	Voter
 }
@@ -35,8 +37,30 @@ func (server *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage
 		PrevLogIndex: server.LastLogIndex(),
 		PrevLogTerm:  server.prevLogTerm(),
 		Entries:      entries,
-		CommitIndex:  server.LastCommitIndex(),
+		CommitIndex:  server.CommitIndex,
 	}
+}
+
+func (server *Server) rolledBackMessage(m AppendEntriesMessage) AppendEntriesMessage {
+	prevLogIndex := m.PrevLogIndex - 1
+	var prevLogTerm int
+	var entries []LogEntry
+	if prevLogIndex <= 0 {
+		prevLogTerm = 0
+		entries = server.Log
+	} else {
+		prevLogTerm = server.Log[m.PrevLogIndex-2].Term
+		entries = server.Log[m.PrevLogIndex-2:]
+	}
+	return AppendEntriesMessage{
+		Term:         server.Term,
+		LeaderId:     server.Id,
+		PrevLogIndex: prevLogIndex,
+		PrevLogTerm:  prevLogTerm,
+		Entries:      entries,
+		CommitIndex:  server.CommitIndex,
+	}
+
 }
 
 func (server *Server) prevLogTerm() int {
@@ -57,8 +81,19 @@ func (server *Server) broadcastToPeers(message AppendEntriesMessage,
 				if err != nil {
 					failureCount++
 				} else {
-					responseChannel <- response
-					return
+					if response.Success {
+						responseChannel <- response
+						return
+					} else {
+						message = server.rolledBackMessage(message)
+						if message.PrevLogIndex < 0 {
+							// We need to do some kind of logging. This means that for some reason
+							// we can not replay a log onto a peer
+							peerFailureChannel <- 0
+							return
+						}
+						fmt.Println(message)
+					}
 				}
 			}
 			peerFailureChannel <- 0
