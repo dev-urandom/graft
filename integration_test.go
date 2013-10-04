@@ -1,7 +1,6 @@
 package graft
 
 import (
-	e "github.com/benmills/examples"
 	"github.com/benmills/quiz"
 	"github.com/wjdix/tiktok"
 	"testing"
@@ -12,33 +11,30 @@ func buildThrowAwayStateMachine() Commiter {
 	return SpyStateMachine{throwAway}
 }
 
-func TestIntegration(t *testing.T) {
-	e.Describe("log", t,
-		e.It("will continue to pull from leaders log back in time until followers are up to date", func(expect e.Expectation) {
-			c := newCluster(3).withChannelPeers().withStateMachine(buildThrowAwayStateMachine).withTimeouts(2, 9, 9)
-			c.startChannelPeers()
-			c.startElectionTimers()
+func TestALeaderCanOverwriteItsLogToPartitionedServerAfterHeal(t *testing.T) {
+	test := quiz.Test(t)
+	c := newCluster(3).withChannelPeers().withStateMachine(buildThrowAwayStateMachine).withTimeouts(2, 9, 9)
+	c.startChannelPeers()
+	c.startElectionTimers()
 
-			c.server(1).StartElection()
-			c.partition(3)
+	c.server(1).StartElection()
+	c.partition(3)
 
-			c.server(1).AppendEntries("A")
-			c.server(1).AppendEntries("B")
+	c.server(1).AppendEntries("A")
+	c.server(1).AppendEntries("B")
 
-			expect(c.server(3).CommitIndex).To.Equal(0)
+	test.Expect(c.server(3).CommitIndex).To.Equal(0)
 
-			c.healPartition(3)
-			c.partition(2)
+	c.healPartition(3)
+	c.partition(2)
 
-			expect(c.server(3).CommitIndex).To.Equal(0)
+	test.Expect(c.server(3).CommitIndex).To.Equal(0)
 
-			c.server(1).AppendEntries("C")
+	c.server(1).AppendEntries("C")
 
-			expect(c.server(1).CommitIndex).To.Equal(3)
-			expect(c.server(3).CommitIndex).To.Equal(2)
-			expect(len(c.server(3).Log)).To.Equal(3)
-		}),
-	)
+	test.Expect(c.server(1).CommitIndex).To.Equal(3)
+	test.Expect(c.server(3).CommitIndex).To.Equal(2)
+	test.Expect(len(c.server(3).Log)).To.Equal(3)
 }
 
 func TestA3NodeClusterElectsTheFirstNodeToCallForElection(t *testing.T) {
