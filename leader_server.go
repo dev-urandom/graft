@@ -1,7 +1,5 @@
 package graft
 
-import "fmt"
-
 type LeaderServer struct {
 	Voter
 }
@@ -92,7 +90,6 @@ func (server *Server) broadcastToPeers(message AppendEntriesMessage,
 							peerFailureChannel <- 0
 							return
 						}
-						fmt.Println(message)
 					}
 				}
 			}
