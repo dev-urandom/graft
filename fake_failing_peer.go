@@ -5,6 +5,8 @@ import (
 )
 
 type FailingPeer struct {
+	receiveRequestVoteCallback      func()
+	receiveAppendEntriesCallback    func()
 	numberOfFails                   int
 	successfulResponse              VoteResponseMessage
 	failureAppendEntriesResponse    AppendEntriesResponseMessage
@@ -14,7 +16,7 @@ type FailingPeer struct {
 
 func (peer *FailingPeer) ReceiveAppendEntries(message AppendEntriesMessage) (AppendEntriesResponseMessage, error) {
 	if peer.shouldFail() {
-		return peer.failureAppendEntriesResponse, nil
+		return peer.failureAppendEntriesResponse, errors.New("boom")
 	}
 
 	for _, entry := range message.Entries {
