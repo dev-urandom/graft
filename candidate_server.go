@@ -19,52 +19,13 @@ func (server *CandidateServer) RequestVote() RequestVoteMessage {
 func (server *CandidateServer) StartElection() {
 	requestVoteMessage := server.RequestVote()
 	server.VotedFor = server.Id
-	receiveVoteChan := make(chan VoteResponseMessage)
-	electionFinishedChan := make(chan int)
-	failedPeerChan := make(chan int)
-	go func(peercount int) {
-		received := 0
-		for received < peercount {
-			select {
-			case <-failedPeerChan:
-				received++
-			case response := <-receiveVoteChan:
-				received++
-				ended := server.ReceiveVoteResponse(response)
-				if ended {
-					electionFinishedChan <- 1
-					return
-				}
-			}
-		}
-		electionFinishedChan <- 1
-		return
-	}(len(server.Peers))
 
-	for i, peer := range server.Peers {
-		go func(maxFailures int, peerN int, target Peer) {
-			failureCount := 0
-			for failureCount < maxFailures {
-				response, err := target.ReceiveRequestVote(requestVoteMessage)
-				if err != nil {
-					failureCount++
-				} else {
-					receiveVoteChan <- response
-					return
-				}
-			}
-			failedPeerChan <- 1
-			return
-		}(5, i, peer)
-	}
+	server.collectVotes(PeerBroadcast(requestVoteMessage, server.Peers))
 
-	select {
-	case <-electionFinishedChan:
-		if server.VotesGranted >= (len(server.Peers) / 2) {
-			server.State = Leader
-		} else {
-			server.State = Follower
-		}
+	if server.VotesGranted >= (len(server.Peers) / 2) {
+		server.State = Leader
+	} else {
+		server.State = Follower
 	}
 }
 
@@ -80,4 +41,19 @@ func (server *CandidateServer) ReceiveVoteResponse(message VoteResponseMessage) 
 		return true
 	}
 	return false
+}
+
+func (server *CandidateServer) collectVotes(b *broadcast) {
+	for {
+		select {
+		case r := <-b.Response:
+			endElection := server.ReceiveVoteResponse(r.VoteRes)
+			r.Done()
+			if endElection {
+				return
+			}
+		case <-b.End:
+			return
+		}
+	}
 }
