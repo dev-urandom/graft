@@ -5,6 +5,7 @@ type Voter struct {
 }
 
 func (server *Server) ReceiveRequestVote(message RequestVoteMessage) (VoteResponseMessage, error) {
+	defer server.Persist()
 	if server.Term < message.Term && server.logUpToDate(message) {
 		server.stepDown()
 		server.Term = message.Term

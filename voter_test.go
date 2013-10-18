@@ -1,7 +1,9 @@
 package graft
 
 import (
+	"encoding/json"
 	"github.com/benmills/quiz"
+	"io/ioutil"
 	"testing"
 )
 
@@ -126,5 +128,37 @@ func TestReceiveRequestVoteWithHigherTermCausesVoterToStepDown(t *testing.T) {
 
 	server.ReceiveRequestVote(message)
 
+	test.Expect(server.State).ToEqual(Follower)
+}
+
+func TestPersistsStateBeforeVoting(t *testing.T) {
+	defer cleanTmpDir()
+	test := quiz.Test(t)
+	server := NewFromConfiguration(
+		ServerConfiguration{
+			Id:                  "id",
+			Peers:               []string{},
+			PersistenceLocation: "tmp",
+		},
+	)
+
+	message := RequestVoteMessage{
+		Term:         1,
+		CandidateId:  "other_server_id",
+		LastLogIndex: 0,
+		LastLogTerm:  0,
+	}
+
+	server.ReceiveRequestVote(message)
+
+	file, err := ioutil.ReadFile("tmp/graft-stateid.json")
+	if err != nil {
+		t.Fail()
+	}
+
+	var state PersistedServerState
+	json.Unmarshal(file, &state)
+	test.Expect(state.CurrentTerm).ToEqual(1)
+	test.Expect(state.VotedFor).ToEqual("other_server_id")
 	test.Expect(server.State).ToEqual(Follower)
 }
