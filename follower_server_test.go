@@ -1,7 +1,10 @@
 package graft
 
 import (
+	"encoding/json"
 	e "github.com/benmills/examples"
+	"github.com/benmills/quiz"
+	"io/ioutil"
 	"testing"
 )
 
@@ -209,4 +212,47 @@ func TestFollowerServer(t *testing.T) {
 			expect(entry.Data).ToEqual("good")
 		}),
 	)
+}
+
+func TestAServerPersistsBeforeRespondToAppendEntries(t *testing.T) {
+	defer cleanTmpDir()
+	test := quiz.Test(t)
+	server := NewFromConfiguration(
+		ServerConfiguration{
+			Id:                  "id",
+			Peers:               []string{},
+			PersistenceLocation: "tmp",
+		},
+	)
+	server.VotedFor = "other"
+	message := AppendEntriesMessage{
+		Term:         1,
+		LeaderId:     "leader_id",
+		PrevLogIndex: 0,
+		Entries:      []LogEntry{LogEntry{Term: 1, Data: "good"}},
+		CommitIndex:  0,
+	}
+
+	server.ReceiveAppendEntries(message)
+
+	file, err := ioutil.ReadFile("tmp/graft-stateid.json")
+	if err != nil {
+		t.Fail()
+	}
+
+	var state PersistedServerState
+	json.Unmarshal(file, &state)
+	test.Expect(state.CurrentTerm).ToEqual(1)
+	test.Expect(state.VotedFor).ToEqual("other")
+
+	logFile, err := ioutil.ReadFile("tmp/graft-logid.json")
+	if err != nil {
+		t.Fail()
+	}
+
+	var log []LogEntry
+	json.Unmarshal(logFile, &log)
+	test.Expect(len(log)).ToEqual(1)
+	test.Expect(log[0].Term).ToEqual(1)
+	test.Expect(log[0].Data).ToEqual("good")
 }

@@ -5,7 +5,9 @@ type FollowerServer struct {
 }
 
 func (server *Server) ReceiveAppendEntries(message AppendEntriesMessage) (AppendEntriesResponseMessage, error) {
+	defer server.Persist()
 	server.stepDown()
+
 	if server.Term < message.Term {
 		server.Term = message.Term
 	}

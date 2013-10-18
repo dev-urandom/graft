@@ -9,10 +9,12 @@ import (
 )
 
 func cleanTmpDir() {
-	os.Remove("tmp/graft-state.json")
-	os.Remove("tmp/graft-test.log")
-	os.Remove("tmp/graft-log.json")
+	os.RemoveAll("tmp")
 	os.Mkdir("tmp", 0755)
+}
+
+func init() {
+	cleanTmpDir()
 }
 
 func TestPersistReturnsErrorIfWriteFails(t *testing.T) {
@@ -36,7 +38,7 @@ func TestPersistReturnsErrorIfWriteFails(t *testing.T) {
 }
 
 func TestPersistLogWritesLogToDisk(t *testing.T) {
-	cleanTmpDir()
+	defer cleanTmpDir()
 	test := quiz.Test(t)
 
 	server := ServerBase{
@@ -71,7 +73,7 @@ func TestPersistLogWritesLogToDisk(t *testing.T) {
 }
 
 func TestPersistServerStateIncludesCurrentTermAndVotedFor(t *testing.T) {
-	cleanTmpDir()
+	defer cleanTmpDir()
 	test := quiz.Test(t)
 
 	server := ServerBase{
@@ -122,7 +124,7 @@ func TestPersistServerReturnsErrorIfFails(t *testing.T) {
 }
 
 func TestPersistStateForConfiguredServer(t *testing.T) {
-	cleanTmpDir()
+	defer cleanTmpDir()
 	test := quiz.Test(t)
 
 	config := ServerConfiguration{
@@ -138,7 +140,7 @@ func TestPersistStateForConfiguredServer(t *testing.T) {
 
 	server.Persist()
 
-	file, err := ioutil.ReadFile("tmp/graft-state.json")
+	file, err := ioutil.ReadFile("tmp/graft-statefoo.json")
 	if err != nil {
 		t.Fail()
 	}
@@ -149,7 +151,7 @@ func TestPersistStateForConfiguredServer(t *testing.T) {
 	test.Expect(state.VotedFor).ToEqual("hello")
 	test.Expect(state.CurrentTerm).ToEqual(1)
 
-	file, err = ioutil.ReadFile("tmp/graft-log.json")
+	file, err = ioutil.ReadFile("tmp/graft-logfoo.json")
 	if err != nil {
 		t.Fail()
 	}

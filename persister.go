@@ -38,13 +38,16 @@ func (persister *Persister) stateToPersist() PersistedServerState {
 }
 
 func (persister *Persister) Persist() error {
-	err := persister.PersistState(persister.statePath())
-	if err != nil {
-		return err
-	}
-	err = persister.PersistLog(persister.logPath())
-	if err != nil {
-		return err
+	if persister.PersistenceLocation != "" {
+		err := persister.PersistState(persister.statePath())
+		if err != nil {
+			return err
+		}
+		err = persister.PersistLog(persister.logPath())
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 	return nil
 }
@@ -73,9 +76,9 @@ func (persister *Persister) LoadPersistedLog() error {
 }
 
 func (persister Persister) statePath() string {
-	return filepath.Join(persister.PersistenceLocation, "graft-state.json")
+	return filepath.Join(persister.PersistenceLocation, "graft-state"+persister.Id+".json")
 }
 
 func (persister Persister) logPath() string {
-	return filepath.Join(persister.PersistenceLocation, "graft-log.json")
+	return filepath.Join(persister.PersistenceLocation, "graft-log"+persister.Id+".json")
 }

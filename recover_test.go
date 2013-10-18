@@ -8,15 +8,16 @@ import (
 )
 
 func TestServerStartReadsFromPersistedState(t *testing.T) {
+	defer cleanTmpDir()
 	test := quiz.Test(t)
 
 	log := []LogEntry{LogEntry{1, "foo"}}
 	logData, _ := json.Marshal(log)
-	ioutil.WriteFile("tmp/graft-log.json", logData, 0644)
+	ioutil.WriteFile("tmp/graft-logfoo.json", logData, 0644)
 
 	state := PersistedServerState{"id", 1}
 	data, _ := json.Marshal(state)
-	ioutil.WriteFile("tmp/graft-state.json", data, 0644)
+	ioutil.WriteFile("tmp/graft-statefoo.json", data, 0644)
 
 	configuration := ServerConfiguration{
 		Id:                  "foo",
@@ -34,11 +35,12 @@ func TestServerStartReadsFromPersistedState(t *testing.T) {
 }
 
 func TestLoadPersistedState(t *testing.T) {
+	defer cleanTmpDir()
 	test := quiz.Test(t)
 
 	state := PersistedServerState{"id", 1}
 	data, _ := json.Marshal(state)
-	ioutil.WriteFile("tmp/graft-state.json", data, 0644)
+	ioutil.WriteFile("tmp/graft-statefoo.json", data, 0644)
 
 	configuration := ServerConfiguration{
 		Id:                  "foo",

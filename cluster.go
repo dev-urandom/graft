@@ -8,6 +8,7 @@ import (
 	"github.com/wjdix/tiktok"
 	"log"
 	"net/http/httptest"
+	"os"
 	"time"
 )
 
@@ -154,4 +155,12 @@ func (c *cluster) withTimeouts(timeouts ...time.Duration) *cluster {
 	}
 
 	return c
+}
+
+func (c *cluster) cleanUp() {
+	for _, s := range c.servers {
+		os.Remove(s.statePath())
+		os.Remove(s.logPath())
+
+	}
 }

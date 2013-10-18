@@ -14,6 +14,7 @@ func buildThrowAwayStateMachine() Commiter {
 func TestALeaderCanOverwriteItsLogToPartitionedServerAfterHeal(t *testing.T) {
 	test := quiz.Test(t)
 	c := newCluster(3).withChannelPeers().withStateMachine(buildThrowAwayStateMachine).withTimeouts(2, 9, 9)
+	defer c.cleanUp()
 	c.startChannelPeers()
 	c.startElectionTimers()
 
@@ -40,6 +41,7 @@ func TestALeaderCanOverwriteItsLogToPartitionedServerAfterHeal(t *testing.T) {
 func TestA3NodeClusterElectsTheFirstNodeToCallForElection(t *testing.T) {
 	test := quiz.Test(t)
 	c := newCluster(3).withChannelPeers().withTimeouts(2, 9, 9)
+	defer c.cleanUp()
 	c.startChannelPeers()
 	c.startElectionTimers()
 
@@ -53,6 +55,7 @@ func TestA3NodeClusterElectsTheFirstNodeToCallForElection(t *testing.T) {
 func TestStartElectionIsLiveWith2FailingNodes(t *testing.T) {
 	test := quiz.Test(t)
 	c := newCluster(3).withChannelPeers().withTimeouts(2, 9, 9)
+	defer c.cleanUp()
 	c.startChannelPeers()
 	c.startElectionTimers()
 	c.partition(2, 3)
@@ -67,6 +70,7 @@ func TestStartElectionIsLiveWith2FailingNodes(t *testing.T) {
 func TestA5NodeClusterCanElectLeaderIf2NodesPartitioned(t *testing.T) {
 	test := quiz.Test(t)
 	c := newCluster(5).withChannelPeers().withTimeouts(2, 9, 9, 9, 9)
+	defer c.cleanUp()
 	c.startChannelPeers()
 	c.partition(4, 5)
 	c.startElectionTimers()
@@ -81,6 +85,7 @@ func TestA5NodeClusterCanElectLeaderIf2NodesPartitioned(t *testing.T) {
 func TestA5NodeClusterWillEndAnElectionEarlyUnderAPartitionDueToHigherTerm(t *testing.T) {
 	test := quiz.Test(t)
 	c := newCluster(5).withChannelPeers().withTimeouts(2, 9, 9, 9, 9)
+	defer c.cleanUp()
 
 	// server 3 lead before 4 and 5 were partitioned
 	c.server(3).Term = 2
@@ -102,6 +107,7 @@ func TestA5NodeClusterWillEndAnElectionEarlyUnderAPartitionDueToHigherTerm(t *te
 func TestHttpElection(t *testing.T) {
 	test := quiz.Test(t)
 	c := newCluster(3).withHttpPeers()
+	defer c.cleanUp()
 	defer c.closeHttpServers()
 
 	c.server(1).StartElection()
@@ -120,6 +126,7 @@ func TestHttpElection(t *testing.T) {
 func TestCanCommitAcrossA3NodeHttpCluster(t *testing.T) {
 	test := quiz.Test(t)
 	c := newCluster(3).withHttpPeers()
+	defer c.cleanUp()
 	defer c.closeHttpServers()
 	c.electLeader(1)
 
@@ -131,6 +138,7 @@ func TestCanCommitAcrossA3NodeHttpCluster(t *testing.T) {
 func TestCannotCommitAcrossA3NodeClusterIfTwoNodesArePartitioned(t *testing.T) {
 	test := quiz.Test(t)
 	c := newCluster(3).withChannelPeers().withTimeouts(2, 9, 9)
+	defer c.cleanUp()
 	c.startChannelPeers()
 	c.electLeader(1)
 
