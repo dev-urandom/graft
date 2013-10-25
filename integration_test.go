@@ -4,6 +4,8 @@ import (
 	"github.com/benmills/quiz"
 	"github.com/wjdix/tiktok"
 	"testing"
+	"encoding/json"
+	"io/ioutil"
 )
 
 func buildThrowAwayStateMachine() Commiter {
@@ -46,7 +48,7 @@ func TestA3NodeClusterElectsTheFirstNodeToCallForElection(t *testing.T) {
 	c.startElectionTimers()
 
 	tiktok.Tick(3)
-
+				   
 	c.shutdown()
 
 	test.Expect(c.server(1).State).ToEqual(Leader)
@@ -65,6 +67,59 @@ func TestStartElectionIsLiveWith2FailingNodes(t *testing.T) {
 	c.shutdown()
 
 	test.Expect(c.server(1).State).To.Equal(Follower)
+}
+
+func TestTwoNodesWithPersistedStateWillTakeOverClusterWhenRestarted(t *testing.T) {
+	test := quiz.Test(t)
+
+	// Setup config on disk for server 2 and 3
+
+	state := PersistedServerState {
+		VotedFor: "id2",
+		CurrentTerm: 2,
+	}
+	log := []LogEntry{
+		LogEntry{
+			Term: 1,
+			Data: "Foo",
+		},
+		LogEntry{
+			Term: 1,
+			Data: "Bar",
+		},
+	}
+
+	sd, _ := json.Marshal(state)
+	ld, _ := json.Marshal(log)
+
+	ioutil.WriteFile("tmp/graft-stateid2.json", sd, 0644)
+	ioutil.WriteFile("tmp/graft-logid2.json", ld, 0644)
+	ioutil.WriteFile("tmp/graft-stateid3.json", sd, 0644)
+	ioutil.WriteFile("tmp/graft-logid3.json", ld, 0644)
+	
+	
+	c := newCluster(0)
+	c.addServerWithConfiguration(ServerConfiguration{
+		"id1",
+		[]string{},
+		"tmp",
+	}).addServerWithConfiguration(ServerConfiguration{
+		"id2",
+		[]string{},
+		"tmp",
+	}).addServerWithConfiguration(ServerConfiguration{
+		"id3",
+		[]string{},
+		"tmp",
+	}).withChannelPeers()
+			
+	defer c.cleanUp()
+	c.startChannelPeers()
+	c.startElectionTimers()
+
+	c.electLeader(2)
+
+	test.Expect(c.server(2).State).ToEqual(Leader)
 }
 
 func TestA5NodeClusterCanElectLeaderIf2NodesPartitioned(t *testing.T) {
