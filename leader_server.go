@@ -5,38 +5,28 @@ type LeaderServer struct {
 	Voter
 }
 
-func (server *Server) AppendEntries(data ...string) {
-	message := server.GenerateAppendEntries(data...)
+func (s *Server) AppendEntries(data ...string) {
+	message := s.GenerateAppendEntries(data...)
 	appendResponseChan := make(chan AppendEntriesResponseMessage)
 	finishedChannel := make(chan bool)
 	peerFailureChannel := make(chan int)
-
-	go server.listenForPeerResponses(appendResponseChan, peerFailureChannel, finishedChannel)
-
-	server.broadcastToPeers(message, appendResponseChan, peerFailureChannel)
-
-	select {
-	case success := <-finishedChannel:
-		if success {
-			server.updateLog(message.PrevLogIndex, message.Entries)
-			server.CommitIndex++
-		}
-	}
-}
-
-func (s *Server) sendHeartBeat() {
-	message := s.GenerateAppendEntries()
-	appendResponseChan := make(chan AppendEntriesResponseMessage)
-	finishedChannel := make(chan bool)
-	peerFailureChannel := make(chan int)
-
+	
+	s.updateLog(message.PrevLogIndex, message.Entries)
+	
 	go s.listenForPeerResponses(appendResponseChan, peerFailureChannel, finishedChannel)
 
 	s.broadcastToPeers(message, appendResponseChan, peerFailureChannel)
 
 	select {
-	case <-finishedChannel:
+	case success := <-finishedChannel:
+		if success {
+			s.CommitIndex += len(data)
+		}
 	}
+}
+
+func (s *Server) sendHeartBeat() {
+	s.AppendEntries()
 }
 
 func (s *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage {
