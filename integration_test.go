@@ -1,22 +1,27 @@
 package graft
 
 import (
+	"encoding/json"
 	"github.com/benmills/quiz"
 	"github.com/wjdix/tiktok"
-	"testing"
-	"encoding/json"
 	"io/ioutil"
+	"testing"
 )
 
 func buildThrowAwayStateMachine() Commiter {
-	throwAway := make(chan string, 10)
+	throwAway := make(chan string, 100)
 	return SpyStateMachine{throwAway}
 }
 
 func TestALeaderCanOverwriteItsLogToPartitionedServerAfterHeal(t *testing.T) {
 	test := quiz.Test(t)
-	c := newCluster(3).withChannelPeers().withStateMachine(buildThrowAwayStateMachine).withTimeouts(2, 9, 9)
+	c := newCluster(3).
+		withChannelPeers().
+		withStateMachine(buildThrowAwayStateMachine).
+		withTimeouts(2, 9, 9)
+
 	defer c.cleanUp()
+
 	c.startChannelPeers()
 	c.startElectionTimers()
 
@@ -48,7 +53,7 @@ func TestA3NodeClusterElectsTheFirstNodeToCallForElection(t *testing.T) {
 	c.startElectionTimers()
 
 	tiktok.Tick(3)
-				   
+
 	c.shutdown()
 
 	test.Expect(c.server(1).State).ToEqual(Leader)
@@ -74,8 +79,8 @@ func TestTwoNodesWithPersistedStateWillTakeOverClusterWhenRestarted(t *testing.T
 
 	// Setup config on disk for server 2 and 3
 
-	state := PersistedServerState {
-		VotedFor: "id2",
+	state := PersistedServerState{
+		VotedFor:    "id2",
 		CurrentTerm: 2,
 	}
 	log := []LogEntry{
@@ -96,8 +101,7 @@ func TestTwoNodesWithPersistedStateWillTakeOverClusterWhenRestarted(t *testing.T
 	ioutil.WriteFile("tmp/graft-logid2.json", ld, 0644)
 	ioutil.WriteFile("tmp/graft-stateid3.json", sd, 0644)
 	ioutil.WriteFile("tmp/graft-logid3.json", ld, 0644)
-	
-	
+
 	c := newCluster(0)
 	c.addServerWithConfiguration(ServerConfiguration{
 		"id1",
@@ -112,14 +116,15 @@ func TestTwoNodesWithPersistedStateWillTakeOverClusterWhenRestarted(t *testing.T
 		[]string{},
 		"tmp",
 	}).withChannelPeers()
-			
-	defer c.cleanUp()
+
 	c.startChannelPeers()
 	c.startElectionTimers()
 
 	c.electLeader(2)
 
+	c.cleanUp()
 	test.Expect(c.server(2).State).ToEqual(Leader)
+	test.Expect(len(c.server(1).Log)).ToEqual(2)
 }
 
 func TestA5NodeClusterCanElectLeaderIf2NodesPartitioned(t *testing.T) {

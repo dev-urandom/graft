@@ -1,5 +1,6 @@
 package graft
 
+
 type ServerBase struct {
 	Id                   string
 	Log                  []LogEntry

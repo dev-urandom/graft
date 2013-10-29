@@ -1,5 +1,6 @@
 package graft
 
+
 type LeaderServer struct {
 	Voter
 }
@@ -23,55 +24,70 @@ func (server *Server) AppendEntries(data ...string) {
 	}
 }
 
-func (server *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage {
-	entries := []LogEntry{}
-	for _, d := range data {
-		entries = append(entries, LogEntry{Term: server.Term, Data: d})
-	}
+func (s *Server) sendHeartBeat() {
+	message := s.GenerateAppendEntries()
+	appendResponseChan := make(chan AppendEntriesResponseMessage)
+	finishedChannel := make(chan bool)
+	peerFailureChannel := make(chan int)
 
-	return AppendEntriesMessage{
-		Term:         server.Term,
-		LeaderId:     server.Id,
-		PrevLogIndex: server.LastLogIndex(),
-		PrevLogTerm:  server.prevLogTerm(),
-		Entries:      entries,
-		CommitIndex:  server.CommitIndex,
+	go s.listenForPeerResponses(appendResponseChan, peerFailureChannel, finishedChannel)
+
+	s.broadcastToPeers(message, appendResponseChan, peerFailureChannel)
+
+	select {
+	case <-finishedChannel:
 	}
 }
 
-func (server *Server) rolledBackMessage(m AppendEntriesMessage) AppendEntriesMessage {
+func (s *Server) GenerateAppendEntries(data ...string) AppendEntriesMessage {
+	entries := []LogEntry{}
+	for _, d := range data {
+		entries = append(entries, LogEntry{Term: s.Term, Data: d})
+	}
+
+	return AppendEntriesMessage{
+		Term:         s.Term,
+		LeaderId:     s.Id,
+		PrevLogIndex: s.LastLogIndex(),
+		PrevLogTerm:  s.prevLogTerm(),
+		Entries:      entries,
+		CommitIndex:  s.CommitIndex,
+	}
+}
+
+func (s *Server) rolledBackMessage(m AppendEntriesMessage) AppendEntriesMessage {
 	prevLogIndex := m.PrevLogIndex - 1
 	var prevLogTerm int
 	var entries []LogEntry
 	if prevLogIndex <= 0 {
 		prevLogTerm = 0
-		entries = server.Log
+		entries = s.Log
 	} else {
-		prevLogTerm = server.Log[m.PrevLogIndex-2].Term
-		entries = server.Log[m.PrevLogIndex-2:]
+		prevLogTerm = s.Log[m.PrevLogIndex-2].Term
+		entries = s.Log[m.PrevLogIndex-2:]
 	}
 	return AppendEntriesMessage{
-		Term:         server.Term,
-		LeaderId:     server.Id,
+		Term:         s.Term,
+		LeaderId:     s.Id,
 		PrevLogIndex: prevLogIndex,
 		PrevLogTerm:  prevLogTerm,
 		Entries:      entries,
-		CommitIndex:  server.CommitIndex,
+		CommitIndex:  s.CommitIndex,
 	}
 
 }
 
-func (server *Server) prevLogTerm() int {
-	if server.LastLogIndex() > len(server.Log) || server.LastLogIndex() == 0 {
+func (s *Server) prevLogTerm() int {
+	if s.LastLogIndex() > len(s.Log) || s.LastLogIndex() == 0 {
 		return 0
 	} else {
-		return server.Log[server.LastLogIndex()-1].Term
+		return s.Log[s.LastLogIndex()-1].Term
 	}
 }
 
-func (server *Server) broadcastToPeers(message AppendEntriesMessage,
+func (s *Server) broadcastToPeers(message AppendEntriesMessage,
 	responseChannel chan AppendEntriesResponseMessage, peerFailureChannel chan int) {
-	for _, peer := range server.Peers {
+	for _, peer := range s.Peers {
 		go func(maxFailures int, target Peer) {
 			failureCount := 0
 			for failureCount < maxFailures {
@@ -83,7 +99,7 @@ func (server *Server) broadcastToPeers(message AppendEntriesMessage,
 						responseChannel <- response
 						return
 					} else {
-						message = server.rolledBackMessage(message)
+						message = s.rolledBackMessage(message)
 						if message.PrevLogIndex < 0 {
 							// We need to do some kind of logging. This means that for some reason
 							// we can not replay a log onto a peer
@@ -99,9 +115,9 @@ func (server *Server) broadcastToPeers(message AppendEntriesMessage,
 	}
 }
 
-func (server *Server) listenForPeerResponses(responseChannel chan AppendEntriesResponseMessage,
+func (s *Server) listenForPeerResponses(responseChannel chan AppendEntriesResponseMessage,
 	peerFailureChannel chan int, finishedChannel chan bool) {
-	peerCount := len(server.Peers)
+	peerCount := len(s.Peers)
 	received := 0
 	successfulAppends := 1
 	for received < peerCount {
