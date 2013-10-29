@@ -62,6 +62,13 @@ func (c *cluster) withStateMachine(machineBuilder CommiterBuilder) *cluster {
 	return c
 }
 
+func (c *cluster) addServerWithConfiguration(config ServerConfiguration) *cluster {
+	server := NewFromConfiguration(config)
+	c.servers = append(c.servers, server)
+
+	return c
+}
+
 func (c *cluster) addPeers() {
 	for si, s := range c.servers {
 		for pi, p := range c.peers {

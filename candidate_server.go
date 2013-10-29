@@ -16,7 +16,7 @@ func (server *CandidateServer) RequestVote() RequestVoteMessage {
 	}
 }
 
-func (server *CandidateServer) StartElection() {
+func (server *Server) StartElection() {
 	requestVoteMessage := server.RequestVote()
 	server.VotedFor = server.Id
 
@@ -24,6 +24,7 @@ func (server *CandidateServer) StartElection() {
 
 	if server.VotesGranted >= (len(server.Peers) / 2) {
 		server.State = Leader
+		server.sendHeartBeat()
 	} else {
 		server.State = Follower
 	}
