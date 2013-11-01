@@ -1,131 +1,131 @@
 package graft
 
 import (
-	e "github.com/benmills/examples"
+	"github.com/benmills/quiz"
 	"github.com/wjdix/tiktok"
 	"testing"
 )
 
-func TestCandidateServer(t *testing.T) {
-	e.Describe("RequestVote", t,
-		e.It("builds a RequestVote message derived from log", func(expect e.Expectation) {
-			server := New("id")
-			server.Log = []LogEntry{LogEntry{Term: 1, Data: "test"}, LogEntry{Term: 1, Data: "foo"}}
-			newRequestVote := server.RequestVote()
+func TestBuildsRequestVoteFromLog(t *testing.T) {
+	test := quiz.Test(t)
+	server := New("id")
+	server.Log = []LogEntry{LogEntry{Term: 1, Data: "test"}, LogEntry{Term: 1, Data: "foo"}}
+	newRequestVote := server.RequestVote()
 
-			expect(newRequestVote.Term).To.Equal(1)
-			expect(newRequestVote.CandidateId).To.Equal(server.Id)
-			expect(newRequestVote.LastLogIndex).To.Equal(2)
-			expect(newRequestVote.LastLogTerm).To.Equal(1)
-		}),
-	)
+	test.Expect(newRequestVote.Term).To.Equal(1)
+	test.Expect(newRequestVote.CandidateId).To.Equal(server.Id)
+	test.Expect(newRequestVote.LastLogIndex).To.Equal(2)
+	test.Expect(newRequestVote.LastLogTerm).To.Equal(1)
+}
 
-	e.Describe("ReceiveVoteResponse", t,
-		e.It("ends election if response has higher term", func(expect e.Expectation) {
-			server := New("id")
-			server.Term = 0
-			server.State = Candidate
+func TestEndsElectionOnHigherTerm(t *testing.T) {
+	test := quiz.Test(t)
+	server := New("id")
+	server.Term = 0
+	server.State = Candidate
 
-			server.ReceiveVoteResponse(VoteResponseMessage{
-				VoteGranted: false,
-				Term:        2,
-			})
+	server.ReceiveVoteResponse(VoteResponseMessage{
+		VoteGranted: false,
+		Term:        2,
+	})
 
-			expect(server.State).ToEqual(Follower)
-			expect(server.Term).ToEqual(2)
-			expect(server.VotesGranted).ToEqual(0)
-		}),
+	test.Expect(server.State).ToEqual(Follower)
+	test.Expect(server.Term).ToEqual(2)
+	test.Expect(server.VotesGranted).ToEqual(0)
 
-		e.It("will tally votes granted", func(expect e.Expectation) {
-			server := New("id")
-			server.Term = 0
-			server.State = Candidate
+}
 
-			server.ReceiveVoteResponse(VoteResponseMessage{
-				VoteGranted: true,
-				Term:        0,
-			})
+func TestOnlyCountsVotesGranted(t *testing.T) {
+	test := quiz.Test(t)
+	server := New("id")
+	server.Term = 0
+	server.State = Candidate
 
-			expect(server.VotesGranted).ToEqual(1)
-			expect(server.State).ToEqual(Candidate)
-			expect(server.Term).ToEqual(0)
-		}),
+	server.ReceiveVoteResponse(VoteResponseMessage{
+		VoteGranted: true,
+		Term:        0,
+	})
 
-		e.It("will continue the election even if VoteGranted is false", func(expect e.Expectation) {
-			server := New("id")
-			server.Term = 0
-			server.State = Candidate
+	test.Expect(server.VotesGranted).ToEqual(1)
+	test.Expect(server.State).ToEqual(Candidate)
+	test.Expect(server.Term).ToEqual(0)
 
-			server.ReceiveVoteResponse(VoteResponseMessage{
-				VoteGranted: false,
-				Term:        0,
-			})
+}
 
-			expect(server.State).ToEqual(Candidate)
-			expect(server.Term).ToEqual(0)
-			expect(server.VotesGranted).ToEqual(0)
-		}),
-	)
+func TestContinueTheElectionIfVoteGrantedIsFalse(t *testing.T) {
+	test := quiz.Test(t)
+	server := New("id")
+	server.Term = 0
+	server.State = Candidate
 
-	e.Describe("StartElection", t,
-		e.It("can win the election", func(expect e.Expectation) {
-			serverA := New("id")
-			serverB := New("id")
-			serverC := New("id")
-			serverA.AddPeers(serverB, serverC)
+	server.ReceiveVoteResponse(VoteResponseMessage{
+		VoteGranted: false,
+		Term:        0,
+	})
 
-			serverA.StartElection()
+	test.Expect(server.State).ToEqual(Candidate)
+	test.Expect(server.Term).ToEqual(0)
+	test.Expect(server.VotesGranted).ToEqual(0)
+}
 
-			expect(serverA.State).ToEqual(Leader)
-			expect(serverA.Term).ToEqual(1)
-			expect(serverA.VotesGranted).ToEqual(2)
+func TestCanWinAnElection(t *testing.T) {
+	test := quiz.Test(t)
+	serverA := New("id")
+	serverB := New("id")
+	serverC := New("id")
+	serverA.AddPeers(serverB, serverC)
 
-			expect(serverA.VotedFor).ToEqual(serverA.Id)
-			expect(serverB.VotedFor).ToEqual(serverA.Id)
-			expect(serverC.VotedFor).ToEqual(serverA.Id)
-		}),
+	serverA.StartElection()
 
-		e.It("will retry sending RequestVote to peers if errors occur", func(expect e.Expectation) {
-			serverA := New("id")
-			serverB := New("id")
-			serverC := &FailingPeer{
-				numberOfFails: 1,
-				successfulResponse: VoteResponseMessage{
-					Term:        0,
-					VoteGranted: true,
-				},
-			}
+	test.Expect(serverA.State).ToEqual(Leader)
+	test.Expect(serverA.Term).ToEqual(1)
+	test.Expect(serverA.VotesGranted).ToEqual(2)
 
-			serverA.AddPeers(serverB, serverC)
+	test.Expect(serverA.VotedFor).ToEqual(serverA.Id)
+	test.Expect(serverB.VotedFor).ToEqual(serverA.Id)
+	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
+}
 
-			serverA.StartElection()
+func TestCanRetryAskingForVotes(t *testing.T) {
+	test := quiz.Test(t)
+	serverA := New("id")
+	serverB := New("id")
+	serverC := &FailingPeer{
+		numberOfFails: 1,
+		successfulResponse: VoteResponseMessage{
+			Term:        0,
+			VoteGranted: true,
+		},
+	}
 
-			expect(serverA.State).ToEqual(Leader)
-			expect(serverA.Term).ToEqual(1)
-			expect(serverA.VotesGranted).ToEqual(2)
-		}),
+	serverA.AddPeers(serverB, serverC)
 
-		e.It("can start and win an election after election timeout", func(expect e.Expectation) {
-			serverA := New("id")
-			timer := NewElectionTimer(1, serverA)
-			timer.tickerBuilder = FakeTicker
-			defer tiktok.ClearTickers()
-			serverA.ElectionTimer = timer
-			serverB := New("id")
-			serverC := New("id")
-			serverA.AddPeers(serverB, serverC)
+	serverA.StartElection()
 
-			serverA.Start()
-			tiktok.Tick(1)
+	test.Expect(serverA.State).ToEqual(Leader)
+	test.Expect(serverA.Term).ToEqual(1)
+	test.Expect(serverA.VotesGranted).ToEqual(2)
+}
 
-			timer.ShutDown()
-			expect(serverA.State).ToEqual(Leader)
-			expect(serverA.Term).ToEqual(1)
-			expect(serverA.VotesGranted).ToEqual(2)
+func TestCanBecomeALeaderOnTimeout(t *testing.T) {
+	test := quiz.Test(t)
+	serverA := New("id")
+	timer := NewElectionTimer(1, serverA)
+	timer.tickerBuilder = FakeTicker
+	defer tiktok.ClearTickers()
+	serverA.ElectionTimer = timer
+	serverB := New("id")
+	serverC := New("id")
+	serverA.AddPeers(serverB, serverC)
 
-			expect(serverB.VotedFor).ToEqual(serverA.Id)
-			expect(serverC.VotedFor).ToEqual(serverA.Id)
+	serverA.Start()
+	tiktok.Tick(1)
 
-		}),
-	)
+	timer.ShutDown()
+	test.Expect(serverA.State).ToEqual(Leader)
+	test.Expect(serverA.Term).ToEqual(1)
+	test.Expect(serverA.VotesGranted).ToEqual(2)
+
+	test.Expect(serverB.VotedFor).ToEqual(serverA.Id)
+	test.Expect(serverC.VotedFor).ToEqual(serverA.Id)
 }
